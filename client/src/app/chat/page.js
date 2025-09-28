@@ -4,10 +4,8 @@ import { SidebarProvider } from "@/components/ui/sidebar";
 
 export default function Chat() {
   return (
-    <>
-      <SidebarProvider>
-        <Sidebar />
-      </SidebarProvider>
-    </>
+    <SidebarProvider>
+      <Sidebar />
+    </SidebarProvider>
   );
 }

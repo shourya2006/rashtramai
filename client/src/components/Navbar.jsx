@@ -1,11 +1,14 @@
 "use client";
 import React, { useState, useEffect } from 'react'
 import Link from 'next/link'
-import { Cylinder, Menu, X, ChevronRight } from 'lucide-react'
+import { Cylinder, Menu, X, ChevronRight, User, LogOut } from 'lucide-react'
+import { useAuth } from '@/context/AuthContext'
 
 const Navbar = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false)
   const [scrolled, setScrolled] = useState(false)
+  const [isUserMenuOpen, setIsUserMenuOpen] = useState(false)
+  const { isAuthenticated, user, logout, loading } = useAuth()
 
   useEffect(() => {
     const handleScroll = () => {
@@ -14,6 +17,16 @@ const Navbar = () => {
     window.addEventListener('scroll', handleScroll)
     return () => window.removeEventListener('scroll', handleScroll)
   }, [])
+
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (isUserMenuOpen && !event.target.closest('.user-menu-container')) {
+        setIsUserMenuOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [isUserMenuOpen])
 
   return (
     <nav
@@ -44,18 +57,60 @@ const Navbar = () => {
             <span className="absolute bottom-0 left-0 w-0 h-0.5 bg-gray-900 transition-all duration-300 group-hover:w-full"></span>
           </Link>
           <Link 
-            href="/signup" 
-            className="ml-6 bg-[#B20D38] hover:bg-primary-dark text-white px-6 py-2.5 rounded-md font-medium transition-all duration-300 shadow-sm hover:shadow-md transform hover:-translate-y-0.5"
-          >
-            Get Started
-          </Link>
-          <Link 
             href="/contact" 
             className="text-gray-700 hover:text-gray-900 font-medium relative group"
           >
             Contact Us
             <span className="absolute bottom-0 left-0 w-0 h-0.5 bg-gray-900 transition-all duration-300 group-hover:w-full"></span>
           </Link>
+          
+          {/* Conditional rendering based on authentication */}
+          {!loading && (
+            <>
+              {isAuthenticated ? (
+                <div className="relative ml-6 user-menu-container">
+                  <button 
+                    onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
+                    className="flex items-center space-x-2 text-gray-700 hover:text-gray-900 focus:outline-none"
+                  >
+                    <div className="w-8 h-8 bg-[#B20D38] rounded-full flex items-center justify-center">
+                      <User className="w-4 h-4 text-white" />
+                    </div>
+                    <span className="font-medium">{user?.name || 'User'}</span>
+                    <ChevronRight className={`w-4 h-4 transition-transform ${isUserMenuOpen ? 'rotate-90' : ''}`} />
+                  </button>
+                  {isUserMenuOpen && (
+                    <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg py-1 z-10">
+                      <Link 
+                        href="/chat" 
+                        className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                        onClick={() => setIsUserMenuOpen(false)}
+                      >
+                        Dashboard
+                      </Link>
+                      <button 
+                        onClick={() => {
+                          logout();
+                          setIsUserMenuOpen(false);
+                        }}
+                        className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center space-x-2"
+                      >
+                        <LogOut className="w-4 h-4" />
+                        <span>Sign Out</span>
+                      </button>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <Link 
+                  href="/signup" 
+                  className="ml-6 bg-[#B20D38] hover:bg-primary-dark text-white px-6 py-2.5 rounded-md font-medium transition-all duration-300 shadow-sm hover:shadow-md transform hover:-translate-y-0.5"
+                >
+                  Get Started
+                </Link>
+              )}
+            </>
+          )}
         </div>
         <div className="md:hidden">
           <button
@@ -101,13 +156,46 @@ const Navbar = () => {
               <span className="absolute bottom-0 left-0 w-0 h-0.5 bg-gray-900 transition-all duration-300 group-hover:w-full"></span>
             </Link>
             <div className="pt-4 flex flex-col space-y-4 mt-2">
-              <Link 
-                href="/signup" 
-                className="bg-[#B20D38] hover:bg-primary-dark text-white px-5 py-3 rounded-md font-medium text-center transition-all duration-300 shadow-sm hover:shadow-md"
-                onClick={() => setIsMenuOpen(false)}
-              >
-                Get Started
-              </Link>
+              {/* Mobile menu conditional rendering */}
+              {!loading && (
+                <>
+                  {isAuthenticated ? (
+                    <>
+                      <div className="flex items-center space-x-3 px-3 py-2 bg-gray-50 rounded-md">
+                        <div className="w-8 h-8 bg-[#B20D38] rounded-full flex items-center justify-center">
+                          <User className="w-4 h-4 text-white" />
+                        </div>
+                        <span className="font-medium text-gray-900">{user?.name || 'User'}</span>
+                      </div>
+                      <Link 
+                        href="/chat" 
+                        className="text-gray-700 hover:text-gray-900 font-medium text-center py-2 border border-gray-200 rounded-md hover:border-gray-400"
+                        onClick={() => setIsMenuOpen(false)}
+                      >
+                        Dashboard
+                      </Link>
+                      <button 
+                        onClick={() => {
+                          logout();
+                          setIsMenuOpen(false);
+                        }}
+                        className="text-gray-700 hover:text-gray-900 font-medium text-center py-2 border border-gray-200 rounded-md hover:border-gray-400 flex items-center justify-center space-x-2"
+                      >
+                        <LogOut className="w-4 h-4" />
+                        <span>Sign Out</span>
+                      </button>
+                    </>
+                  ) : (
+                    <Link 
+                      href="/signup" 
+                      className="bg-[#B20D38] hover:bg-primary-dark text-white px-5 py-3 rounded-md font-medium text-center transition-all duration-300 shadow-sm hover:shadow-md"
+                      onClick={() => setIsMenuOpen(false)}
+                    >
+                      Get Started
+                    </Link>
+                  )}
+                </>
+              )}
               <Link 
                 href="/contact" 
                 className="text-gray-700 hover:text-gray-900 font-medium text-center py-2 border border-gray-200 rounded-md hover:border-gray-400 flex items-center justify-center space-x-2 group relative"

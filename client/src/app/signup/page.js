@@ -8,21 +8,52 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@radix-ui/react-label";
 import { Checkbox } from "@/components/ui/checkbox";
+import { useAuth } from "@/context/AuthContext";
+import PublicRoute from "@/components/PublicRoute";
 
 const Signup = () => {
+  const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [agreeTerms, setAgreeTerms] = useState(false);
+  const [error, setError] = useState("");
+  const { register, loading } = useAuth();
 
-  const handleSignup = (e) => {
+  const handleSignup = async (e) => {
     e.preventDefault();
-    // Handle signup logic here
-    console.log({ email, password, confirmPassword, agreeTerms });
+    setError("");
+
+    if (!name || !email || !password || !confirmPassword) {
+      setError("Please fill in all fields");
+      return;
+    }
+
+    if (password !== confirmPassword) {
+      setError("Passwords do not match");
+      return;
+    }
+
+    if (password.length < 8) {
+      setError("Password must be at least 8 characters long");
+      return;
+    }
+
+    if (!agreeTerms) {
+      setError("Please agree to the Terms of Service and Privacy Policy");
+      return;
+    }
+
+    const result = await register(name, email, password);
+    
+    if (!result.success) {
+      setError(result.error);
+    }
   };
 
   return (
-    <div className="flex min-h-screen">
+    <PublicRoute>
+      <div className="flex min-h-screen">
       {/* Left side - Signup form */}
       <div className="w-full md:w-1/2 flex flex-col justify-center items-center p-8 bg-background">
         <div className="w-full max-w-md space-y-8">
@@ -56,14 +87,22 @@ const Signup = () => {
             </div>
             
             <form onSubmit={handleSignup} className="space-y-4">
+              {error && (
+                <div className="p-3 text-sm text-red-600 bg-red-50 border border-red-200 rounded-md">
+                  {error}
+                </div>
+              )}
+              
               <div className="grid w-full items-center gap-1.5">
                 <Label htmlFor="name">Full Name</Label>
                 <Input 
                   id="name" 
-                  type="name" 
+                  type="text" 
                   placeholder="Full Name" 
-                  value=''
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
                   required
+                  disabled={loading}
                 />
               </div>
               <div className="grid w-full items-center gap-1.5">
@@ -75,6 +114,7 @@ const Signup = () => {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   required
+                  disabled={loading}
                 />
               </div>
               
@@ -83,10 +123,11 @@ const Signup = () => {
                 <Input 
                   id="password" 
                   type="password" 
-                  placeholder="Password" 
+                  placeholder="Password (min 8 characters)" 
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   required
+                  disabled={loading}
                 />
               </div>
               
@@ -99,6 +140,7 @@ const Signup = () => {
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
                   required
+                  disabled={loading}
                 />
               </div>
               
@@ -107,13 +149,16 @@ const Signup = () => {
                   id="terms" 
                   checked={agreeTerms}
                   onCheckedChange={setAgreeTerms}
+                  disabled={loading}
                 />
                 <label htmlFor="terms" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
                   I agree to the <Link href="/terms" className="underline">Terms of Service</Link> and <Link href="/privacy" className="underline">Privacy Policy</Link>
                 </label>
               </div>
               
-              <Button type="submit" className="w-full py-5">Sign up</Button>
+              <Button type="submit" className="w-full py-5" disabled={loading}>
+                {loading ? "Creating Account..." : "Sign up"}
+              </Button>
             </form>
             
             <div className="text-center text-sm">
@@ -162,6 +207,7 @@ const Signup = () => {
         </div>
       </div>
     </div>
+    </PublicRoute>
   );
 };
 

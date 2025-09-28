@@ -8,20 +8,35 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@radix-ui/react-label";
 import { Checkbox } from "@/components/ui/checkbox";
+import { useAuth } from "@/context/AuthContext";
+import PublicRoute from "@/components/PublicRoute";
 
 const Login = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [rememberMe, setRememberMe] = useState(false);
+  const [error, setError] = useState("");
+  const { login, loading } = useAuth();
 
-  const handleLogin = (e) => {
+  const handleLogin = async (e) => {
     e.preventDefault();
-    // Handle login logic here
-    console.log({ email, password, rememberMe });
+    setError("");
+
+    if (!email || !password) {
+      setError("Please fill in all fields");
+      return;
+    }
+
+    const result = await login(email, password, rememberMe);
+    
+    if (!result.success) {
+      setError(result.error);
+    }
   };
 
   return (
-    <div className="flex min-h-screen">
+    <PublicRoute>
+      <div className="flex min-h-screen">
       {/* Left side - Login form */}
       <div className="w-full md:w-1/2 flex flex-col justify-center items-center p-8 bg-background">
         <div className="w-full max-w-md space-y-8">
@@ -55,6 +70,12 @@ const Login = () => {
             </div>
             
             <form onSubmit={handleLogin} className="space-y-4">
+              {error && (
+                <div className="p-3 text-sm text-red-600 bg-red-50 border border-red-200 rounded-md">
+                  {error}
+                </div>
+              )}
+              
               <div className="grid w-full items-center gap-1.5">
                 <Label htmlFor="email">Email</Label>
                 <Input 
@@ -64,6 +85,7 @@ const Login = () => {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   required
+                  disabled={loading}
                 />
               </div>
               
@@ -76,10 +98,25 @@ const Login = () => {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   required
+                  disabled={loading}
                 />
               </div>
               
-              <Button type="submit" className="w-full py-5 cursor-pointer">Login</Button>
+              <div className="flex items-center space-x-2">
+                <Checkbox 
+                  id="rememberMe" 
+                  checked={rememberMe}
+                  onCheckedChange={setRememberMe}
+                  disabled={loading}
+                />
+                <label htmlFor="rememberMe" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
+                  Remember me
+                </label>
+              </div>
+              
+              <Button type="submit" className="w-full py-5 cursor-pointer" disabled={loading}>
+                {loading ? "Logging in..." : "Login"}
+              </Button>
             </form>
             
             <div className="text-center text-sm">
@@ -130,6 +167,7 @@ const Login = () => {
         </div>
       </div>
     </div>
+    </PublicRoute>
   );
 };
 
