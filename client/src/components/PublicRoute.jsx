@@ -10,7 +10,7 @@ const PublicRoute = ({ children }) => {
 
   useEffect(() => {
     if (!loading && isAuthenticated) {
-      router.push('/chat');
+      router.push('/app');
     }
   }, [isAuthenticated, loading, router]);
 

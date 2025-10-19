@@ -3,7 +3,8 @@ const router = express.Router();
 const { LoginController, RegisterController, getUserController } = require("./controller");
 const { body } = require("express-validator");
 const fetchuser = require("../middleware/fetchuser");
-
+const {googleLoginController} = require("./googleController");
+const passport = require('passport');
 router.post(
   "/login",
   [
@@ -45,5 +46,7 @@ router.post(
 );
 
 router.post('/getuser', fetchuser, getUserController);
+router.get('/google',passport.authenticate('google', { scope: ['profile', 'email'] }));
+router.get('/google/callback', passport.authenticate('google', { failureRedirect: '/login', session: false }), googleLoginController);
 
 module.exports = router;

@@ -19,12 +19,30 @@ export const AuthProvider = ({ children }) => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const router = useRouter();
 
-  // API Base URL
   const API_BASE_URL = 'http://localhost:5001/api/auth';
 
-  // Check if user is logged in on app start
   useEffect(() => {
-    checkAuthStatus();
+    // Check for token in URL (from Google OAuth redirect)
+    const urlParams = new URLSearchParams(window.location.search);
+    const tokenFromUrl = urlParams.get('token');
+    const errorFromUrl = urlParams.get('error');
+    
+    if (tokenFromUrl) {
+      // Store token from Google OAuth in both storages
+      localStorage.setItem('auth-token', tokenFromUrl);
+      sessionStorage.setItem('auth-token', tokenFromUrl);
+      // Clean up URL
+      window.history.replaceState({}, document.title, window.location.pathname);
+      // Check auth status with new token
+      checkAuthStatus();
+    } else if (errorFromUrl) {
+      // Clean up URL and show error
+      window.history.replaceState({}, document.title, window.location.pathname);
+      console.error('OAuth error:', errorFromUrl);
+      checkAuthStatus();
+    } else {
+      checkAuthStatus();
+    }
   }, []);
 
   const checkAuthStatus = async () => {
@@ -88,7 +106,7 @@ export const AuthProvider = ({ children }) => {
         await checkAuthStatus();
         
         // Redirect to chat page
-        router.push('/chat');
+        router.push('/app');
         return { success: true };
       } else {
         return { 
@@ -128,7 +146,7 @@ export const AuthProvider = ({ children }) => {
         await checkAuthStatus();
         
         // Redirect to chat page
-        router.push('/chat');
+        router.push('/app');
         return { success: true };
       } else {
         return { 
@@ -147,6 +165,11 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
+  const googleLogin = () => {
+    // Direct redirect to Google OAuth endpoint
+    window.location.href = `${API_BASE_URL}/google`;
+  };
+
   const logout = () => {
     localStorage.removeItem('auth-token');
     sessionStorage.removeItem('auth-token');
@@ -161,6 +184,7 @@ export const AuthProvider = ({ children }) => {
     isAuthenticated,
     login,
     register,
+    googleLogin,
     logout,
     checkAuthStatus,
   };
