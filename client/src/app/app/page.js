@@ -12,6 +12,9 @@ import {
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
+import BillsListUI from '../bills/page';
+import SettingsPage from "../settings/page";
+import Dashboard from "../dashboard/page";
 
 function SidebarDemo() {
   const [activeView, setActiveView] = useState("Dashboard");
@@ -77,18 +80,18 @@ function SidebarDemo() {
                       activeView === link.label && "bg-primary/10 rounded-lg"
                     )}
                   >
-                    <SidebarLink 
+                    <SidebarLink
                       link={{
                         ...link,
                         icon: React.cloneElement(link.icon, {
                           className: cn(
                             "h-5 w-5 flex-shrink-0",
-                            activeView === link.label 
-                              ? "text-primary" 
+                            activeView === link.label
+                              ? "text-primary"
                               : "text-neutral-700 dark:text-neutral-200"
-                          )
-                        })
-                      }} 
+                          ),
+                        }),
+                      }}
                     />
                   </div>
                 ))}
@@ -110,7 +113,7 @@ function SidebarDemo() {
           </SidebarBody>
         </Sidebar>
       </div>
-      
+
       {/* Mobile Sidebar */}
       <div className="md:hidden w-full">
         <Sidebar open={open} setOpen={setOpen}>
@@ -127,18 +130,18 @@ function SidebarDemo() {
                       activeView === link.label && "bg-primary/10 rounded-lg"
                     )}
                   >
-                    <SidebarLink 
+                    <SidebarLink
                       link={{
                         ...link,
                         icon: React.cloneElement(link.icon, {
                           className: cn(
                             "h-5 w-5 flex-shrink-0",
-                            activeView === link.label 
-                              ? "text-primary" 
+                            activeView === link.label
+                              ? "text-primary"
                               : "text-neutral-700 dark:text-neutral-200"
-                          )
-                        })
-                      }} 
+                          ),
+                        }),
+                      }}
                     />
                   </div>
                 ))}
@@ -160,9 +163,9 @@ function SidebarDemo() {
           </SidebarBody>
         </Sidebar>
       </div>
-      
+
       {/* Main Content Area */}
-      <div 
+      <div
         className={cn(
           "flex-1 h-screen overflow-auto transition-all duration-300 ease-in-out",
           "pt-14 md:pt-0",
@@ -177,7 +180,7 @@ function SidebarDemo() {
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -10 }}
             transition={{ duration: 0.25, ease: "easeInOut" }}
-            className="h-full"
+            className="h-full w-full" // ✅ make sure this exists
           >
             {renderActiveView(activeView)}
           </motion.div>
@@ -190,30 +193,26 @@ function SidebarDemo() {
     switch(view) {
       case "Dashboard":
         return (
-          <div className="p-6 bg-background h-full">
-            <h1 className="text-2xl font-bold mb-4">Dashboard</h1>
-            <p className="text-muted-foreground">Dashboard coming soon...</p>
+          <div className="w-screen h-screen overflow-x-hidden">
+            <Dashboard />
           </div>
         );
       case "Parliament Bills":
         return (
-          <div className="p-6 bg-background h-full">
-            <h1 className="text-2xl font-bold mb-4">Parliament Bills</h1>
-            <p className="text-muted-foreground">Parliament Bills analysis features coming soon...</p>
+          <div className="w-434 h-screen overflow-x-hidden">
+            <BillsListUI />
           </div>
         );
       case "Parliament Acts":
         return (
-          <div className="p-6 bg-background h-full">
-            <h1 className="text-2xl font-bold mb-4">Parliament Acts</h1>
-            <p className="text-muted-foreground">Parliament Acts features coming soon...</p>
+          <div className="w-434 h-screen overflow-x-hidden">
+            <BillsListUI />
           </div>
         );
       case "Settings":
         return (
-          <div className="p-6 bg-background h-full">
-            <h1 className="text-2xl font-bold mb-4">Settings</h1>
-            <p className="text-muted-foreground">Application settings coming soon...</p>
+          <div className="w-screen h-screen overflow-x-hidden">
+            <SettingsPage />
           </div>
         );
       case "Logout":
