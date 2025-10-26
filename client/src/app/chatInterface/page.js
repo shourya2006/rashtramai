@@ -1,7 +1,6 @@
 "use client";
 import React, { useState, useRef, useEffect } from "react";
 import {
-  MessageSquare,
   Plus,
   Clock,
   FileText,
@@ -11,17 +10,35 @@ import {
   Scale,
   Menu,
   X,
+  MoreHorizontal,
+  Trash,
+  Pin,
 } from "lucide-react";
 
 export default function ChatInterface() {
-  // 🧠 Load saved conversations or initialize default
-  const [conversations, setConversations] = useState(() => {
-    if (typeof window !== "undefined") {
-      const saved = localStorage.getItem("rashtram_conversations");
-      if (saved) return JSON.parse(saved);
-    }
-    return [
-      {
+  // 🚫 Do NOT read from localStorage during SSR
+  const [conversations, setConversations] = useState([]);
+  const [activeConversationId, setActiveConversationId] = useState(null);
+  const [mounted, setMounted] = useState(false);
+  const [openMenuId, setOpenMenuId] = useState(null);
+  const [inputMessage, setInputMessage] = useState("");
+  const [isTyping, setIsTyping] = useState(false);
+  const [showSummary, setShowSummary] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+
+  const messagesEndRef = useRef(null);
+  const textareaRef = useRef(null);
+  const menuRef = useRef(null);
+
+  // 🧩 Load conversations only after client mounts
+  useEffect(() => {
+    const saved = localStorage.getItem("rashtram_conversations");
+    if (saved) {
+      const parsed = JSON.parse(saved);
+      setConversations(parsed);
+      setActiveConversationId(parsed[0]?.id || null);
+    } else {
+      const defaultConv = {
         id: 1,
         title: "Farm Bills Analysis 2020",
         preview: "Analysis of the three agricultural reform bills...",
@@ -34,44 +51,36 @@ export default function ChatInterface() {
             timestamp: "10:00 AM",
           },
         ],
-      },
-    ];
-  });
+      };
+      setConversations([defaultConv]);
+      setActiveConversationId(defaultConv.id);
+    }
+    setMounted(true);
+  }, []);
 
-  const [activeConversationId, setActiveConversationId] = useState(
-    conversations[0]?.id || null
-  );
-  const [inputMessage, setInputMessage] = useState("");
-  const [isTyping, setIsTyping] = useState(false);
-  const [showSummary, setShowSummary] = useState(false);
-  const [sidebarOpen, setSidebarOpen] = useState(false);
-
-  const messagesEndRef = useRef(null);
-  const textareaRef = useRef(null);
-
-  const activeConversation = conversations.find(
-    (conv) => conv.id === activeConversationId
-  );
-
-  // 🧩 Persist chats to localStorage whenever they change
+  // 🧩 Persist chats to localStorage
   useEffect(() => {
-    if (typeof window !== "undefined") {
+    if (mounted && conversations.length > 0) {
       localStorage.setItem(
         "rashtram_conversations",
         JSON.stringify(conversations)
       );
     }
-  }, [conversations]);
+  }, [conversations, mounted]);
 
+  const activeConversation = conversations.find(
+    (conv) => conv.id === activeConversationId
+  );
+
+  // 🧩 Smooth scroll on message update
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   };
-
   useEffect(() => {
     scrollToBottom();
   }, [activeConversation?.messages]);
 
-  // 🧩 Create a new chat
+  // 🧩 New chat
   const handleNewChat = () => {
     const newConversation = {
       id: Date.now(),
@@ -90,19 +99,19 @@ export default function ChatInterface() {
         },
       ],
     };
-    setConversations([newConversation, ...conversations]);
+    setConversations((prev) => [newConversation, ...prev]);
     setActiveConversationId(newConversation.id);
     setShowSummary(false);
   };
 
-  // 🧩 Send message and simulate AI response
+  // 🧩 Send message
   const handleSendMessage = () => {
     if (inputMessage.trim() === "") return;
-    const messageText = inputMessage;
+    const text = inputMessage.trim();
 
-    const newMessage = {
+    const userMessage = {
       id: Date.now(),
-      text: messageText,
+      text,
       sender: "user",
       timestamp: new Date().toLocaleTimeString([], {
         hour: "2-digit",
@@ -111,21 +120,21 @@ export default function ChatInterface() {
     };
 
     setConversations((prev) =>
-      prev.map((conv) =>
-        conv.id === activeConversationId
+      prev.map((c) =>
+        c.id === activeConversationId
           ? {
-              ...conv,
-              messages: [...conv.messages, newMessage],
-              preview: messageText.substring(0, 50) + "...",
+              ...c,
+              messages: [...c.messages, userMessage],
+              preview: text.substring(0, 50) + "...",
               timestamp: "Just now",
             }
-          : conv
+          : c
       )
     );
     setInputMessage("");
     setIsTyping(true);
 
-    // Simulate AI typing delay
+    // Simulated AI reply
     setTimeout(() => {
       const responses = [
         "That's an excellent question about this parliamentary bill. Let me analyze its key provisions, implications, and the legislative context for you.",
@@ -133,7 +142,7 @@ export default function ChatInterface() {
         "Let me provide a comprehensive analysis of this legislation, including its objectives, stakeholder impacts, and alignment with existing laws.",
       ];
 
-      const assistantResponse = {
+      const aiMessage = {
         id: Date.now(),
         text: responses[Math.floor(Math.random() * responses.length)],
         sender: "assistant",
@@ -144,14 +153,46 @@ export default function ChatInterface() {
       };
 
       setConversations((prev) =>
-        prev.map((conv) =>
-          conv.id === activeConversationId
-            ? { ...conv, messages: [...conv.messages, assistantResponse] }
-            : conv
+        prev.map((c) =>
+          c.id === activeConversationId
+            ? { ...c, messages: [...c.messages, aiMessage] }
+            : c
         )
       );
       setIsTyping(false);
     }, 1500);
+  };
+
+  const handlePinConversation = (e, id) => {
+    e.stopPropagation(); // Prevent the button from triggering the conversation selection
+
+    setConversations((prevConversations) => {
+      // Find the conversation to pin
+      const updatedConversations = prevConversations.map((conv) => {
+        if (conv.id === id) {
+          return { ...conv, pinned: true }; // Add a pinned flag
+        }
+        return conv;
+      });
+
+      // Sort the conversations: pinned ones should come first
+      updatedConversations.sort(
+        (a, b) => (b.pinned ? 1 : 0) - (a.pinned ? 1 : 0)
+      );
+
+      return updatedConversations;
+    });
+  };
+
+  // Delete a conversation
+  const handleDeleteConversation = (e, id) => {
+    e.stopPropagation(); // Prevent the button from triggering the conversation selection
+
+    if (window.confirm("Are you sure you want to delete this conversation?")) {
+      setConversations((prevConversations) =>
+        prevConversations.filter((conv) => conv.id !== id)
+      );
+    }
   };
 
   const handleKeyPress = (e) => {
@@ -161,14 +202,13 @@ export default function ChatInterface() {
     }
   };
 
-  // 🧩 Typing indicator
   const TypingIndicator = () => (
     <div className="px-6 py-4">
       <div className="max-w-4xl mx-auto flex justify-start space-x-3">
         <div className="w-8 h-8 rounded-full bg-gradient-to-br from-orange-100 to-red-100 border-2 border-red-200 flex items-center justify-center flex-shrink-0">
           <Scale size={16} className="text-red-700" />
         </div>
-        <div className="bg-gray-100 rounded-2xl rounded-tl-sm px-4 py-3 flex items-center space-x-1">
+        <div className="bg-gray-100 rounded-2xl px-4 py-3 flex items-center space-x-1">
           <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" />
           <div
             className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"
@@ -183,13 +223,12 @@ export default function ChatInterface() {
     </div>
   );
 
-  // 🧩 Generate summary
   const generateSummary = () => {
     if (!activeConversation) return "No conversation selected";
     const userMessages = activeConversation.messages.filter(
       (m) => m.sender === "user"
     );
-    const assistantMessages = activeConversation.messages.filter(
+    const aiMessages = activeConversation.messages.filter(
       (m) => m.sender === "assistant"
     );
 
@@ -197,7 +236,7 @@ export default function ChatInterface() {
 
 Total Messages: ${activeConversation.messages.length}
 Your Questions: ${userMessages.length}
-AI Responses: ${assistantMessages.length}
+AI Responses: ${aiMessages.length}
 
 Focus:
 • Legislative provisions
@@ -208,9 +247,18 @@ Focus:
 Last Activity: ${activeConversation.timestamp}`;
   };
 
+  // 🧩 Prevent hydration mismatch: render placeholder until mounted
+  if (!mounted) {
+    return (
+      <div className="flex h-screen items-center justify-center text-gray-500">
+        Loading Rashtram AI...
+      </div>
+    );
+  }
+
   return (
     <div className="flex h-screen bg-white font-sans overflow-hidden">
-      {/* SIDEBAR */}
+      {/* Sidebar */}
       <div
         className={`fixed md:static inset-y-0 left-0 z-30 w-64 bg-gray-50 border-r border-gray-200 flex flex-col transform transition-transform duration-300 ease-in-out ${
           sidebarOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0"
@@ -233,7 +281,7 @@ Last Activity: ${activeConversation.timestamp}`;
           </button>
         </div>
 
-        {/* Conversation List */}
+        {/* Conversations */}
         <div className="flex-1 overflow-y-auto p-3 space-y-2">
           {conversations.map((conv) => (
             <button
@@ -243,40 +291,90 @@ Last Activity: ${activeConversation.timestamp}`;
                 setShowSummary(false);
                 setSidebarOpen(false);
               }}
-              className={`w-full text-left p-3 rounded-lg transition-all duration-200 ${
-                activeConversationId === conv.id
-                  ? "bg-white shadow-sm border-2 border-red-200"
-                  : "hover:bg-white hover:shadow-sm"
+              className={`w-full text-left p-3 rounded-xl transition-all duration-200 relative group ${
+                conv.id === activeConversationId
+                  ? "bg-gradient-to-r from-red-50 to-pink-50 shadow-md border-2 border-red-300"
+                  : "hover:bg-gray-50 hover:shadow-sm border-2 border-transparent"
               }`}
             >
-              <div className="flex items-start space-x-2">
+              <div className="flex items-start space-x-3">
                 <FileText
-                  size={16}
+                  size={18}
                   className={`mt-1 flex-shrink-0 ${
-                    activeConversationId === conv.id
-                      ? "text-red-700"
+                    conv.id === activeConversationId
+                      ? "text-red-600"
                       : "text-gray-400"
                   }`}
                 />
                 <div className="flex-1 min-w-0">
-                  <h3
-                    className={`text-sm font-medium truncate ${
-                      activeConversationId === conv.id
-                        ? "text-red-700"
-                        : "text-gray-700"
-                    }`}
-                  >
-                    {conv.title}
-                  </h3>
+                  <div className="flex items-center gap-2">
+                    <h3
+                      className={`text-sm font-medium truncate ${
+                        conv.id === activeConversationId
+                          ? "text-red-700"
+                          : "text-gray-700"
+                      }`}
+                    >
+                      {conv.title}
+                    </h3>
+                    {conv.pinned && (
+                      <Pin
+                        size={12}
+                        className="text-red-500 flex-shrink-0 fill-current"
+                      />
+                    )}
+                  </div>
                   <p className="text-xs text-gray-500 truncate mt-1">
                     {conv.preview}
                   </p>
-                  <div className="flex items-center space-x-1 mt-1">
+                  <div className="flex items-center space-x-1 mt-2">
                     <Clock size={10} className="text-gray-400" />
                     <span className="text-xs text-gray-400">
                       {conv.timestamp}
                     </span>
                   </div>
+                </div>
+
+                {/* More Options Button (Replaced <button> with <div>) */}
+                <div
+                  className="relative"
+                  ref={openMenuId === conv.id ? menuRef : null}
+                >
+                  <div
+                    className={`p-1.5 rounded-lg transition-colors ${
+                      openMenuId === conv.id
+                        ? "bg-gray-200 text-gray-700"
+                        : "text-gray-400 hover:bg-gray-100 hover:text-gray-600 opacity-0 group-hover:opacity-100"
+                    }`}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setOpenMenuId(openMenuId === conv.id ? null : conv.id);
+                    }}
+                  >
+                    <MoreHorizontal size={16} />
+                  </div>
+
+                  {openMenuId === conv.id && (
+                    <div className="absolute right-0 top-full mt-1 w-48 bg-white shadow-xl rounded-lg border border-gray-200 py-1 z-50 animate-in fade-in slide-in-from-top-2 duration-200">
+                      <button
+                        onClick={(e) => handlePinConversation(e, conv.id)}
+                        className="w-full text-left px-4 py-2 hover:bg-gray-50 transition-colors text-sm text-gray-700 flex items-center gap-2"
+                      >
+                        <Pin
+                          size={14}
+                          className={conv.pinned ? "fill-current" : ""}
+                        />
+                        {conv.pinned ? "Unpin" : "Pin"} Conversation
+                      </button>
+                      <button
+                        onClick={(e) => handleDeleteConversation(e, conv.id)}
+                        className="w-full text-left px-4 py-2 hover:bg-red-50 transition-colors text-sm text-red-600 flex items-center gap-2"
+                      >
+                        <Trash size={14} />
+                        Delete Conversation
+                      </button>
+                    </div>
+                  )}
                 </div>
               </div>
             </button>
@@ -289,7 +387,7 @@ Last Activity: ${activeConversation.timestamp}`;
         </div>
       </div>
 
-      {/* MAIN CHAT AREA */}
+      {/* Main Chat */}
       <div className="flex-1 flex flex-col h-full">
         {/* Top Bar */}
         <div className="bg-white border-b border-gray-200 px-4 py-3 flex justify-between items-center">
@@ -332,7 +430,7 @@ Last Activity: ${activeConversation.timestamp}`;
             <div
               key={msg.id}
               className={`px-4 py-3 md:px-6 ${
-                msg.sender === "user" ? "bg-white" : "bg-gray-50"
+                msg.sender === "user" ? "bg-gray-50" : "bg-gray-50"
               }`}
             >
               <div
@@ -371,7 +469,7 @@ Last Activity: ${activeConversation.timestamp}`;
           <div ref={messagesEndRef} />
         </div>
 
-        {/* Input Box */}
+        {/* Input */}
         <div className="bg-white border-t border-gray-200 px-4 py-3">
           <div className="max-w-4xl mx-auto flex items-end space-x-2 md:space-x-3">
             <textarea
@@ -402,7 +500,7 @@ Last Activity: ${activeConversation.timestamp}`;
         </div>
       </div>
 
-      {/* Summary Panel */}
+      {/* Summary */}
       {showSummary && (
         <div className="fixed md:static right-0 top-0 w-80 h-full bg-white border-l border-gray-200 flex flex-col z-20 animate-slide-in">
           <div className="px-6 py-4 bg-[#B20D38] flex justify-between items-center">
@@ -422,29 +520,6 @@ Last Activity: ${activeConversation.timestamp}`;
               <pre className="text-sm text-gray-700 leading-relaxed whitespace-pre-wrap font-sans">
                 {generateSummary()}
               </pre>
-            </div>
-            <div className="p-4 bg-gray-50 rounded-xl border border-gray-200">
-              <h4 className="font-semibold text-sm text-gray-800 mb-2 flex items-center">
-                <Scale size={14} className="mr-2 text-[#B20D38]" />
-                Quick Stats
-              </h4>
-              <div className="space-y-2 text-xs text-gray-600">
-                <div className="flex justify-between">
-                  <span>Bills Analyzed:</span>
-                  <span className="font-semibold">{conversations.length}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span>Total Queries:</span>
-                  <span className="font-semibold">
-                    {conversations.reduce(
-                      (acc, conv) =>
-                        acc +
-                        conv.messages.filter((m) => m.sender === "user").length,
-                      0
-                    )}
-                  </span>
-                </div>
-              </div>
             </div>
           </div>
         </div>
