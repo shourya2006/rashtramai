@@ -13,6 +13,7 @@ import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/context/AuthContext";
+import ProtectedRoute from "@/components/ProtectedRoute";
 import BillsListUI from '@/components/Bills';
 import ActsUI from '@/components/Acts';
 import SettingsPage from "@/components/Settings";
@@ -271,8 +272,10 @@ export const LogoIcon = () => {
 
 export default function App() {
   return (
-    <main className="flex min-h-screen">
-      <SidebarDemo />
-    </main>
+    <ProtectedRoute>
+      <main className="flex min-h-screen">
+        <SidebarDemo />
+      </main>
+    </ProtectedRoute>
   );
 }

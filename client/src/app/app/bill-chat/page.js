@@ -23,6 +23,7 @@ import {
   updateBillChatSummary,
 } from "@/lib/api";
 import { useRouter } from "next/navigation";
+import ProtectedRoute from "@/components/ProtectedRoute";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import rehypeRaw from "rehype-raw";
@@ -512,11 +513,14 @@ function BillChatContent() {
 
 export default function BillChatPage() {
   return (
-    <>
+    <ProtectedRoute>
       <Suspense
         fallback={
-          <div className="flex items-center justify-center h-screen">
-            <Loader2 className="w-8 h-8 text-[#B20F38] animate-spin" />
+          <div className="min-h-screen flex items-center justify-center bg-gray-50">
+            <div className="text-center">
+              <Loader2 className="w-8 h-8 animate-spin text-red-800 mx-auto mb-4" />
+              <p className="text-gray-600">Loading bill chat...</p>
+            </div>
           </div>
         }
       >
@@ -536,6 +540,6 @@ export default function BillChatPage() {
           animation: slide-in 0.3s ease-out;
         }
       `}</style>
-    </>
+    </ProtectedRoute>
   );
 }
