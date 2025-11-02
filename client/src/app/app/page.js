@@ -211,7 +211,7 @@ function SidebarDemo() {
     switch(view) {
       case "Dashboard":
         return (
-          <div className="w-screen h-screen overflow-x-hidden">
+          <div className="w-[96vw] h-screen overflow-x-hidden">
             <Dashboard />
           </div>
         );
@@ -223,13 +223,13 @@ function SidebarDemo() {
         );
       case "Parliament Acts":
         return (
-          <div className="w-434 h-screen overflow-x-hidden">
+          <div className="w-[96vw] h-screen overflow-x-hidden">
             <ActsUI />
           </div>
         );
       case "Settings":
         return (
-          <div className="w-screen h-screen overflow-x-hidden">
+          <div className="w-[96vw] h-screen overflow-x-hidden">
             <SettingsPage />
           </div>
         );

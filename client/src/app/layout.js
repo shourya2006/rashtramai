@@ -26,6 +26,7 @@ export default function RootLayout({ children }) {
           {pathname === "/login" ||
           pathname === "/signup" ||
           pathname === "/app/bill-chat" ||
+          pathname === "/app/act-chat" ||
           pathname === "/app" ? (
             ""
           ) : (
@@ -35,6 +36,7 @@ export default function RootLayout({ children }) {
           {pathname === "/login" ||
           pathname === "/signup" ||
           pathname === "/app/bill-chat" ||
+          pathname === "/app/act-chat" ||
           pathname === "/app" ? (
             ""
           ) : (

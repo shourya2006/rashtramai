@@ -31,6 +31,23 @@ router.post('/', async (req, res) => {
     if (existenceCheck.exists) {
       console.log(`⚠️ Bill ${billId} already exists with ${existenceCheck.chunksCount} chunks`);
 
+      // Check if summary already exists in the existence check result
+      if (existenceCheck.summary) {
+        console.log('✅ Using existing summary from database (fast path)');
+        return res.json({
+          success: true,
+          message: `Bill ${billId} already exists in database`,
+          chunksStored: existenceCheck.chunksCount || 0,
+          summary: existenceCheck.summary,
+          vectorStorage: true,
+          processingMethod: 'existing-data-with-summary',
+          alreadyProcessed: true,
+          billTitle: existenceCheck.billTitle,
+          lastProcessed: existenceCheck.lastProcessed,
+        });
+      }
+
+      // Only if summary doesn't exist, query for content
       try {
         const index = getIndex();
         const contentQuery = await index.query({
@@ -41,7 +58,7 @@ router.post('/', async (req, res) => {
         });
 
         if (contentQuery.matches && contentQuery.matches.length > 0) {
-          // Check if summary already exists in metadata
+          // Check if summary exists in any of the chunks
           const existingSummary = contentQuery.matches[0].metadata.summary;
           
           if (existingSummary) {

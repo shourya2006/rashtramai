@@ -1,11 +1,17 @@
 const express = require('express');
 const authRouter = require('./auth/route');
-const chatRouter = require('./chat/route');
+const chatRouter = require('./bill/route');
 const fetchUser = require('./middleware/fetchuser');
-const billSummaryRouter = require('./chat/billSummaryRoute');
-const billsRouter = require('./chat/billsRoute');
-const processBillRouter = require('./chat/processBillRoute');
-const billChatRouter = require('./chat/billChatRoute');
+const billSummaryRouter = require('./bill/billSummaryRoute');
+const billsRouter = require('./bill/billsRoute');
+const processBillRouter = require('./bill/processBillRoute');
+const billChatRouter = require('./bill/billChatRoute');
+// Act routes
+const actChatRouter = require('./act/route');
+const actSummaryRouter = require('./act/actSummaryRoute');
+const actsRouter = require('./act/actsRoute');
+const processActRouter = require('./act/processActRoute');
+const actChatManagementRouter = require('./act/actChatRoute');
 const connectDB = require('./db');
 const cors = require('cors');
 const { generalLimiter, authLimiter, helmetConfig } = require('./middleware/security');
@@ -34,6 +40,13 @@ app.use('/api/bill-summary', fetchUser, billSummaryRouter);
 app.use('/api/bills', fetchUser, billsRouter);
 app.use('/api/process-bill', fetchUser, processBillRouter);
 app.use('/api/bill-chats', billChatRouter);
+
+// Act routes
+app.use('/api/act-chat', fetchUser, actChatRouter);
+app.use('/api/act-summary', fetchUser, actSummaryRouter);
+app.use('/api/acts', fetchUser, actsRouter);
+app.use('/api/process-act', fetchUser, processActRouter);
+app.use('/api/act-chats', actChatManagementRouter);
 
 
 app.get('/health', (req, res) => {

@@ -5,8 +5,6 @@ import {
   FileText,
   ArrowRight,
   ExternalLink,
-  CheckCircle,
-  Clock,
   AlertCircle,
   XCircle,
   ChevronDown,
@@ -16,7 +14,6 @@ import {
   MinusCircle,
   CheckCircle2,
   Hourglass,
-  Ban,
   GitBranch,
 } from "lucide-react";
 import { fetchBills } from "@/lib/api";
@@ -26,12 +23,14 @@ export default function BillsSidebarUI() {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedStatus, setSelectedStatus] = useState("All");
   const [bills, setBills] = useState([]);
+  const [statuses, setStatuses] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showFilters, setShowFilters] = useState(false);
   const [error, setError] = useState(null);
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
+  const [totalBills, setTotalBills] = useState(0);
   const { isAuthenticated } = useAuth();
 
   // Fetch initial bills from API
@@ -49,14 +48,21 @@ export default function BillsSidebarUI() {
         setPage(1);
         setBills([]);
         
-        const response = await fetchBills(1, 10); // Fetch first 10 bills
+        const response = await fetchBills(1, 10, searchTerm, selectedStatus); // Fetch with search and status
         
         if (response && response.bills) {
           setBills(response.bills);
           setHasMore(response.pagination?.hasMore || false);
+          setTotalBills(response.pagination?.total || 0);
+          
+          // Update statuses list from response (preserve full list)
+          if (response.statuses && response.statuses.length > 0 && statuses.length === 0) {
+            setStatuses(response.statuses);
+          }
         } else {
           setBills([]);
           setHasMore(false);
+          setTotalBills(0);
         }
       } catch (err) {
         console.error('Failed to fetch bills:', err);
@@ -68,8 +74,13 @@ export default function BillsSidebarUI() {
       }
     };
 
-    loadInitialBills();
-  }, [isAuthenticated]);
+    // Debounce search
+    const timeoutId = setTimeout(() => {
+      loadInitialBills();
+    }, 300);
+
+    return () => clearTimeout(timeoutId);
+  }, [isAuthenticated, searchTerm, selectedStatus]);
 
   // Load more bills when scrolling
   const loadMoreBills = async () => {
@@ -78,7 +89,7 @@ export default function BillsSidebarUI() {
     try {
       setLoadingMore(true);
       const nextPage = page + 1;
-      const response = await fetchBills(nextPage, 10);
+      const response = await fetchBills(nextPage, 10, searchTerm, selectedStatus);
       
       if (response && response.bills) {
         setBills(prev => [...prev, ...response.bills]);
@@ -104,11 +115,6 @@ export default function BillsSidebarUI() {
 
   const openPRSIndia = () => {
     window.open("https://prsindia.org/billtrack/", "_blank");
-  };
-
-  const getUniqueStatuses = () => {
-    const statuses = bills.map((bill) => bill.status).filter(Boolean);
-    return [...new Set(statuses)];
   };
 
   const getStatusIcon = (status) => {
@@ -173,14 +179,8 @@ export default function BillsSidebarUI() {
     </div>
   );
 
-  const filteredBills = bills.filter((bill) => {
-    const matchesSearch = bill.title
-      .toLowerCase()
-      .includes(searchTerm.toLowerCase());
-    const matchesStatus =
-      selectedStatus === "All" || bill.status === selectedStatus;
-    return matchesSearch && matchesStatus;
-  });
+  // No client-side filtering needed - handled by server
+  const filteredBills = bills;
 
   return (
     <div className="h-full flex flex-col bg-gradient-to-b from-slate-50 to-white">
@@ -271,7 +271,7 @@ export default function BillsSidebarUI() {
               >
                 All Status
               </button>
-              {getUniqueStatuses().map((status) => (
+              {statuses.map((status) => (
                 <button
                   key={status}
                   onClick={() => {
@@ -332,40 +332,31 @@ export default function BillsSidebarUI() {
             {filteredBills.map((bill, idx) => {
               const statusInfo = getStatusIcon(bill.status);
               const StatusIcon = statusInfo.icon;
-              const hasPdf = bill.pdf && bill.pdf !== null;
 
               return (
                 <div key={bill.id || idx} className="block group">
                   <div 
                     onClick={() => {
-                      if (hasPdf) {
-                        // Navigate to bill chat with bill data
-                        const billData = {
-                          billId: bill.id,
-                          title: bill.title,
-                          pdfUrl: bill.pdf,
-                          link: bill.link,
-                          status: bill.status
-                        };
-                        window.open(`/app/bill-chat?bill=${encodeURIComponent(JSON.stringify(billData))}`, '_blank');
-                      } else if (bill.link) {
-                        window.open(bill.link, '_blank');
-                      }
+                      // Navigate to bill chat with bill data (PDF fetched on-demand)
+                      const billData = {
+                        billId: bill.id,
+                        title: bill.title,
+                        pdfUrl: bill.pdf || null,
+                        link: bill.link,
+                        status: bill.status
+                      };
+                      window.open(`/app/bill-chat?bill=${encodeURIComponent(JSON.stringify(billData))}`, '_blank');
                     }}
-                    className={`bg-white border border-slate-200 rounded-lg p-3 transition-all hover:shadow-md hover:border-[#B20F38]/30 ${
-                      hasPdf || bill.link ? 'cursor-pointer hover:bg-slate-50' : 'cursor-default'
-                    }`}
+                    className="bg-white border border-slate-200 rounded-lg p-3 transition-all hover:shadow-md hover:border-[#B20F38]/30 cursor-pointer hover:bg-slate-50"
                   >
                     <div className="flex items-start justify-between gap-2 mb-2">
                       <h4 className="text-slate-800 font-semibold text-sm leading-tight group-hover:text-[#B20F38] transition-colors flex-1">
                         {bill.title}
                       </h4>
-                      {(hasPdf || bill.link) && (
-                        <ArrowRight
-                          size={14}
-                          className="text-[#B20F38] opacity-0 group-hover:opacity-100 group-hover:translate-x-0.5 transition-all flex-shrink-0 mt-0.5"
-                        />
-                      )}
+                      <ArrowRight
+                        size={14}
+                        className="text-[#B20F38] opacity-0 group-hover:opacity-100 group-hover:translate-x-0.5 transition-all flex-shrink-0 mt-0.5"
+                      />
                     </div>
 
                     <div className="flex items-center justify-between">
@@ -385,7 +376,7 @@ export default function BillsSidebarUI() {
                         </div>
                       )}
                       <span className="text-xs text-slate-400 font-medium">
-                        {hasPdf ? 'Open chat →' : 'View details →'}
+                        Open chat →
                       </span>
                     </div>
                   </div>
@@ -418,7 +409,7 @@ export default function BillsSidebarUI() {
       <div className="p-3 border-t border-slate-200 bg-white/50">
         <div className="flex items-center justify-between text-xs text-slate-600">
           <span>
-            {filteredBills.length} bill{filteredBills.length !== 1 ? "s" : ""} loaded
+            {filteredBills.length}/{totalBills} bill{filteredBills.length !== 1 ? "s" : ""} loaded
             {hasMore && <span className="text-slate-400 ml-1">(scroll for more)</span>}
           </span>
           <span className="text-slate-400">PRS India</span>

@@ -11,7 +11,11 @@ import {
   AlertCircle,
   BarChart3,
   ChevronRight,
+  ChevronDown,
+  ChevronUp,
   ExternalLink,
+  List,
+  TrendingUp,
 } from "lucide-react";
 import { 
   processBill, 
@@ -21,6 +25,7 @@ import {
   getBillChat,
   addMessageToBillChat,
   updateBillChatSummary,
+  fetchRelatedBills,
 } from "@/lib/api";
 import { useRouter } from "next/navigation";
 import ProtectedRoute from "@/components/ProtectedRoute";
@@ -41,6 +46,12 @@ function BillChatContent() {
   const [showSummary, setShowSummary] = useState(true);
   const [isCachedSummary, setIsCachedSummary] = useState(false);
   const [isCachedChat, setIsCachedChat] = useState(false);
+  const [relatedBills, setRelatedBills] = useState([]);
+  const [loadingRelated, setLoadingRelated] = useState(false);
+  const [showRelated, setShowRelated] = useState(false);
+  const [suggestedQuestions, setSuggestedQuestions] = useState([]);
+  const [generatingSuggestions, setGeneratingSuggestions] = useState(false);
+  const [showSuggestions, setShowSuggestions] = useState(true); // Dropdown state
   const messagesEndRef = useRef(null);
   const textareaRef = useRef(null);
 
@@ -76,7 +87,12 @@ function BillChatContent() {
         if (existingChatResult.success && existingChatResult.chat && existingChatResult.chat.messages.length > 0) {
           console.log("✅ Loaded chat from MongoDB (instant sync)");
           setSummary(existingChatResult.chat.summary);
-          setMessages(existingChatResult.chat.messages);
+          // Ensure all messages have text as string
+          const sanitizedMessages = existingChatResult.chat.messages.map(msg => ({
+            ...msg,
+            text: typeof msg.text === 'object' ? JSON.stringify(msg.text) : msg.text
+          }));
+          setMessages(sanitizedMessages);
           setIsCachedChat(true);
           setIsLoading(false);
           return;
@@ -92,11 +108,35 @@ function BillChatContent() {
         }
       }
 
+      // Fetch PDF if not available (on-demand fetching)
+      let pdfUrl = bill.pdfUrl;
+      if (!pdfUrl && bill.link) {
+        console.log("📄 Fetching PDF on-demand...");
+        try {
+          const pdfResponse = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001/api'}/bills/pdf?link=${encodeURIComponent(bill.link)}`, {
+            headers: {
+              'auth-token': localStorage.getItem('auth-token') || sessionStorage.getItem('auth-token')
+            }
+          });
+          const pdfData = await pdfResponse.json();
+          if (pdfData.success && pdfData.pdf) {
+            pdfUrl = pdfData.pdf;
+            console.log("✅ PDF fetched:", pdfUrl);
+            // Update billData state with the fetched PDF
+            setBillData(prev => ({ ...prev, pdfUrl: pdfUrl }));
+          } else {
+            console.warn("⚠️ No PDF found for this bill");
+          }
+        } catch (pdfError) {
+          console.error("Failed to fetch PDF:", pdfError);
+        }
+      }
+
       // First, process the bill to ensure it's in the vector DB
       console.log("Processing bill...");
       const processResult = await processBill(
         bill.billId.toString(),
-        bill.pdfUrl,
+        pdfUrl,
         bill.title
       );
 
@@ -130,7 +170,7 @@ function BillChatContent() {
             bill.billId.toString(),
             bill.title,
             bill.status,
-            bill.pdfUrl,
+            pdfUrl,
             summaryResult.summary
           );
           
@@ -188,6 +228,127 @@ function BillChatContent() {
       ]);
     } finally {
       setIsLoading(false);
+      
+      // Fetch related bills after initialization
+      if (bill.billId) {
+        fetchRelatedBillsData(bill.billId);
+      }
+
+      // Generate initial suggested questions - pass bill data directly
+      setTimeout(() => {
+        generateSuggestedQuestions(bill);
+      }, 1000);
+    }
+  };
+
+  const fetchRelatedBillsData = async (billId) => {
+    try {
+      setLoadingRelated(true);
+      console.log("🔍 Fetching related bills...");
+      const response = await fetchRelatedBills(billId);
+      if (response.success && response.relatedBills) {
+        setRelatedBills(response.relatedBills);
+        console.log(`✅ Found ${response.relatedBills.length} related bills`);
+      }
+    } catch (error) {
+      console.error("Failed to fetch related bills:", error);
+    } finally {
+      setLoadingRelated(false);
+    }
+  };
+
+  const generateSuggestedQuestions = async (billDataParam = null) => {
+    // Use parameter if provided, otherwise use state
+    const currentBillData = billDataParam || billData;
+    
+    // Don't generate if dropdown is closed
+    if (!showSuggestions) {
+      console.log("⚠️ Skipping suggestions - dropdown is closed");
+      return;
+    }
+    
+    // Don't generate if bill data is not loaded yet
+    if (!currentBillData || !currentBillData.billId) {
+      console.log("⚠️ Skipping suggestions - bill data not ready");
+      return;
+    }
+
+    try {
+      setGeneratingSuggestions(true);
+      console.log("💡 Generating suggested questions...");
+      
+      // Ultra-minimal prompt to reduce token usage
+      // Only use last user message if exists, otherwise mark as initial
+      const lastUserMessage = messages.length > 0 
+        ? messages.filter(m => m.sender === 'user').slice(-1)[0]?.text 
+        : null;
+      
+      const prompt = lastUserMessage
+        ? `Bill: "${currentBillData.title}"\nLast Q: "${lastUserMessage.substring(0, 100)}"\n3 follow-up questions as JSON array:`
+        : `Bill: "${currentBillData.title}"\n3 starter questions as JSON array:`;
+
+      const response = await sendChatMessage(
+        prompt,
+        currentBillData.billId.toString()
+      );
+      
+      // Try to parse JSON from the response
+      let questions = [];
+      try {
+        // Look for JSON array in the response
+        const jsonMatch = response.response.match(/\[[\s\S]*?\]/);
+        if (jsonMatch) {
+          const parsed = JSON.parse(jsonMatch[0]);
+          // Handle both array of strings and array of objects
+          questions = parsed.map(item => {
+            if (typeof item === 'string') {
+              return item;
+            } else if (typeof item === 'object' && item !== null) {
+              // Extract question from object formats like {question: "...", answer: "..."}
+              return item.question || item.text || item.q || JSON.stringify(item);
+            }
+            return String(item);
+          });
+        }
+      } catch (e) {
+        console.log("Failed to parse JSON, trying text parsing...");
+        // Fallback: split by newlines and clean up
+        const lines = response.response.split('\n');
+        questions = lines
+          .filter(line => {
+            const trimmed = line.trim();
+            return trimmed.length > 0 && 
+                   (trimmed.match(/^\d+\./) || trimmed.startsWith('"') || trimmed.startsWith('-'));
+          })
+          .map(line => line.replace(/^\d+\.\s*/, '').replace(/^[-"']\s*/, '').replace(/["']$/, '').trim())
+          .filter(q => q.length > 10 && q.length < 150 && q.includes('?'))
+          .slice(0, 3);
+      }
+      
+      // Ensure all questions are strings
+      questions = questions.filter(q => typeof q === 'string' && q.length > 0);
+      
+      if (questions.length > 0) {
+        setSuggestedQuestions(questions);
+        console.log(`✅ Generated ${questions.length} suggestions`);
+      } else {
+        // Fallback default questions
+        setSuggestedQuestions([
+          "What are the main objectives of this bill?",
+          "Who will be affected by this legislation?",
+          "What are the key provisions and clauses?"
+        ]);
+      }
+    } catch (error) {
+      console.error("Failed to generate suggestions:", error);
+      // Set default questions on error
+      setSuggestedQuestions([
+        "Can you explain the key provisions?",
+        "What impact will this bill have?",
+        "When is this bill expected to be implemented?"
+      ]);
+    } finally {
+      setGeneratingSuggestions(false);
     }
   };
 
@@ -224,8 +385,14 @@ function BillChatContent() {
         billData.billId.toString()
       );
 
+      // Ensure response is a string, not an object
+      let responseText = response.response || "I'm sorry, I couldn't generate a response.";
+      if (typeof responseText === 'object') {
+        responseText = JSON.stringify(responseText);
+      }
+
       const assistantMessage = {
-        text: response.response || "I'm sorry, I couldn't generate a response.",
+        text: responseText,
         sender: "assistant",
         timestamp: new Date().toLocaleTimeString([], {
           hour: "2-digit",
@@ -244,6 +411,9 @@ function BillChatContent() {
       } catch (dbError) {
         console.warn("Failed to save assistant message to MongoDB:", dbError.message);
       }
+
+      // Generate new suggested questions after response
+      generateSuggestedQuestions();
       
     } catch (err) {
       console.error("Error sending message:", err);
@@ -360,6 +530,24 @@ function BillChatContent() {
                 <BarChart3 size={18} />
                 <span className="hidden sm:inline text-sm">Summary</span>
               </button>
+              <button
+                onClick={() => setShowRelated(!showRelated)}
+                className={`flex items-center space-x-2 px-4 py-2 rounded-lg font-medium transition-all duration-200 ${
+                  showRelated
+                    ? "bg-[#B20D38] text-white"
+                    : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                }`}
+              >
+                <TrendingUp size={18} />
+                <span className="hidden sm:inline text-sm">Related</span>
+                {relatedBills.length > 0 && (
+                  <span className={`text-xs px-1.5 py-0.5 rounded-full ${
+                    showRelated ? "bg-white/20" : "bg-[#B20D38] text-white"
+                  }`}>
+                    {relatedBills.length}
+                  </span>
+                )}
+              </button>
             </div>
           </div>
         </div>
@@ -423,6 +611,86 @@ function BillChatContent() {
         )}
       </div>
 
+        {/* Suggested Questions */}
+        {!isLoading && (
+          <div className="bg-gradient-to-r from-gray-50 to-white border-t border-gray-200">
+            <button
+              onClick={() => {
+                const newState = !showSuggestions;
+                setShowSuggestions(newState);
+                // Generate questions when opening dropdown if none exist
+                if (newState && suggestedQuestions.length === 0 && !generatingSuggestions) {
+                  generateSuggestedQuestions();
+                }
+              }}
+              className="w-full flex items-center justify-between px-6 py-3 hover:bg-white/50 transition-colors"
+            >
+              <div className="flex items-center gap-2">
+                <Sparkles className="w-4 h-4 text-amber-500" />
+                <span className="text-xs font-semibold text-gray-600 uppercase tracking-wide">
+                  Suggested Questions
+                </span>
+                {generatingSuggestions && (
+                  <Loader2 className="w-3 h-3 animate-spin text-gray-400" />
+                )}
+              </div>
+              {showSuggestions ? (
+                <ChevronUp className="w-4 h-4 text-gray-400" />
+              ) : (
+                <ChevronDown className="w-4 h-4 text-gray-400" />
+              )}
+            </button>
+            
+            {showSuggestions && (suggestedQuestions.length > 0 || generatingSuggestions) && (
+              <div className="px-6 pb-3">
+            <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-transparent hover:scrollbar-thumb-gray-400">
+              {generatingSuggestions ? (
+                // Skeleton loading with realistic content shapes
+                <>
+                  {[
+                    { width: 'w-72', delay: '0ms' },
+                    { width: 'w-64', delay: '150ms' },
+                    { width: 'w-80', delay: '300ms' }
+                  ].map((item, i) => (
+                    <div
+                      key={i}
+                      className={`flex-shrink-0 ${item.width} bg-white border border-gray-200 rounded-lg p-3 animate-pulse`}
+                      style={{ animationDelay: item.delay }}
+                    >
+                      <div className="flex items-center gap-2">
+                        <div className="w-4 h-4 bg-gray-200 rounded"></div>
+                        <div className="flex-1 space-y-2">
+                          <div className="h-3 bg-gradient-to-r from-gray-200 to-gray-100 rounded w-full"></div>
+                          <div className="h-3 bg-gradient-to-r from-gray-200 to-gray-100 rounded w-3/4"></div>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </>
+              ) : (
+                suggestedQuestions.map((question, index) => (
+                  <button
+                    key={index}
+                    onClick={() => {
+                      setInputMessage(question);
+                      textareaRef.current?.focus();
+                    }}
+                    disabled={isSending}
+                    className="group text-left flex-shrink-0 px-3 py-2 bg-white border border-gray-200 rounded-lg hover:border-[#B20F38] hover:bg-[#FFF5F7] transition-all text-sm text-gray-700 hover:text-[#B20F38] disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <div className="flex items-center gap-2 whitespace-nowrap">
+                      <span className="text-xs opacity-50 group-hover:opacity-100">💬</span>
+                      <span className="max-w-xs truncate">{question}</span>
+                    </div>
+                  </button>
+                ))
+              )}
+            </div>
+              </div>
+            )}
+          </div>
+        )}
+
         {/* Input Area */}
         <div className="bg-white border-t border-gray-200 px-6 py-4">
           <div className="flex items-end space-x-3">
@@ -477,16 +745,6 @@ function BillChatContent() {
               </div>
             ) : summary ? (
               <>
-                {isCachedChat && (
-                  <div className="mb-3 flex items-center justify-center">
-                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 border border-blue-200">
-                      <svg className="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
-                        <path fillRule="evenodd" d="M3 3a1 1 0 011-1h12a1 1 0 011 1v12a1 1 0 01-1 1H4a1 1 0 01-1-1V3zm11 4.414l-4.293 4.293a1 1 0 01-1.414 0L6.586 10 5 11.586V14h10V7.414z" clipRule="evenodd" />
-                      </svg>
-                      Synced from Database
-                    </span>
-                  </div>
-                )}
                 <div className="bg-gradient-to-br from-orange-50 to-red-50 rounded-xl p-4 border border-red-100">
                   <div className="chat-markdown">
                     <ReactMarkdown
@@ -502,6 +760,96 @@ function BillChatContent() {
               <div className="text-center text-gray-500 py-8">
                 <FileText className="w-12 h-12 mx-auto mb-3 text-gray-300" />
                 <p className="text-sm">Bill summary will appear here once processed.</p>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Related Bills Sidebar */}
+      {showRelated && (
+        <div className="w-80 bg-white border-l border-gray-200 flex flex-col">
+          <div className="px-6 py-4 border-b border-gray-200">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-2">
+                <TrendingUp className="w-5 h-5 text-[#B20F38]" />
+                <h3 className="font-semibold text-gray-800">Related Bills</h3>
+              </div>
+              <button
+                onClick={() => setShowRelated(false)}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                ✕
+              </button>
+            </div>
+            <p className="text-xs text-gray-500 mt-1">
+              AI-powered recommendations based on semantic similarity
+            </p>
+          </div>
+          <div className="flex-1 overflow-y-auto p-4">
+            {loadingRelated ? (
+              <div className="flex items-center justify-center h-32">
+                <div className="text-center">
+                  <Loader2 className="w-6 h-6 text-[#B20F38] animate-spin mx-auto mb-2" />
+                  <p className="text-xs text-gray-500">Finding related bills...</p>
+                </div>
+              </div>
+            ) : relatedBills.length > 0 ? (
+              <div className="space-y-3">
+                {relatedBills.map((bill, index) => (
+                  <div
+                    key={bill.billId}
+                    className="group bg-gradient-to-br from-gray-50 to-white border border-gray-200 rounded-lg p-3 hover:shadow-md hover:border-[#B20F38]/30 transition-all cursor-pointer"
+                    onClick={() => {
+                      const billData = {
+                        billId: bill.billId,
+                        title: bill.title,
+                        pdfUrl: bill.pdf,
+                        link: bill.link,
+                        status: bill.status
+                      };
+                      window.open(`/app/bill-chat?bill=${encodeURIComponent(JSON.stringify(billData))}`, '_blank');
+                    }}
+                  >
+                    <div className="flex items-start justify-between gap-2 mb-2">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2 mb-1">
+                          <span className="text-xs font-bold text-[#B20F38]">
+                            #{index + 1}
+                          </span>
+                          <div className="flex items-center gap-1">
+                            <Sparkles className="w-3 h-3 text-amber-500" />
+                            <span className="text-xs font-semibold text-gray-600">
+                              {(bill.similarityScore * 100).toFixed(0)}% match
+                            </span>
+                          </div>
+                        </div>
+                        <h4 className="text-sm font-semibold text-gray-800 leading-tight group-hover:text-[#B20F38] transition-colors">
+                          {bill.title}
+                        </h4>
+                      </div>
+                      <ChevronRight className="w-4 h-4 text-gray-400 group-hover:text-[#B20F38] group-hover:translate-x-0.5 transition-all flex-shrink-0" />
+                    </div>
+                    {bill.status && (
+                      <div className="flex items-center justify-between mt-2">
+                        <span className="text-xs px-2 py-1 bg-gray-100 text-gray-600 rounded-full">
+                          {bill.status}
+                        </span>
+                        <span className="text-xs text-gray-400">
+                          Open →
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center text-gray-500 py-8">
+                <List className="w-12 h-12 mx-auto mb-3 text-gray-300" />
+                <p className="text-sm">No related bills found</p>
+                <p className="text-xs text-gray-400 mt-1">
+                  Related bills will appear here once analyzed
+                </p>
               </div>
             )}
           </div>

@@ -48,12 +48,45 @@ export const apiRequest = async (endpoint, options = {}) => {
 /**
  * Fetch bills from the API
  */
-export const fetchBills = async (page = 1, limit = 10) => {
+export const fetchBills = async (page = 1, limit = 10, search = '', status = '') => {
   try {
-    const data = await apiRequest(`/bills?page=${page}&limit=${limit}`);
+    let url = `/bills?page=${page}&limit=${limit}`;
+    if (search) {
+      url += `&search=${encodeURIComponent(search)}`;
+    }
+    if (status && status !== 'All') {
+      url += `&status=${encodeURIComponent(status)}`;
+    }
+    const data = await apiRequest(url);
     return data;
   } catch (error) {
     console.error('Error fetching bills:', error);
+    throw error;
+  }
+};
+
+/**
+ * Fetch all bill statuses
+ */
+export const fetchBillStatuses = async () => {
+  try {
+    const data = await apiRequest('/bills/status');
+    return data;
+  } catch (error) {
+    console.error('Error fetching bill statuses:', error);
+    throw error;
+  }
+};
+
+/**
+ * Fetch related bills for a given bill ID
+ */
+export const fetchRelatedBills = async (billId) => {
+  try {
+    const data = await apiRequest(`/bills/relatedBills?billId=${billId}`);
+    return data;
+  } catch (error) {
+    console.error('Error fetching related bills:', error);
     throw error;
   }
 };
@@ -223,6 +256,196 @@ export const deleteBillChat = async (billId) => {
     return data;
   } catch (error) {
     console.error('Error deleting bill chat:', error);
+    throw error;
+  }
+};
+
+/**
+ * Acts API Functions
+ */
+
+/**
+ * Fetch acts from the API
+ */
+export const fetchActs = async (page = 1, limit = 10, search = '', year = '') => {
+  try {
+    let url = `/acts?page=${page}&limit=${limit}`;
+    if (search) {
+      url += `&search=${encodeURIComponent(search)}`;
+    }
+    if (year && year !== 'All') {
+      url += `&year=${encodeURIComponent(year)}`;
+    }
+    const data = await apiRequest(url);
+    return data;
+  } catch (error) {
+    console.error('Error fetching acts:', error);
+    throw error;
+  }
+};
+
+/**
+ * Fetch available years for acts
+ */
+export const fetchActYears = async () => {
+  try {
+    const data = await apiRequest('/acts/years');
+    return data;
+  } catch (error) {
+    console.error('Error fetching act years:', error);
+    throw error;
+  }
+};
+
+/**
+ * Process an act PDF
+ */
+export const processAct = async (actId, pdfUrl, title) => {
+  try {
+    const data = await apiRequest('/process-act', {
+      method: 'POST',
+      body: JSON.stringify({ actId, pdfUrl, title }),
+    });
+    return data;
+  } catch (error) {
+    console.error('Error processing act:', error);
+    throw error;
+  }
+};
+
+/**
+ * Get act summary
+ */
+export const getActSummary = async (actId) => {
+  try {
+    const data = await apiRequest(`/act-summary?actId=${actId}`);
+    return data;
+  } catch (error) {
+    console.error('Error getting act summary:', error);
+    throw error;
+  }
+};
+
+/**
+ * Send act chat message
+ */
+export const sendActChatMessage = async (message, actId) => {
+  try {
+    const data = await apiRequest('/act-chat', {
+      method: 'POST',
+      body: JSON.stringify({ message, actId }),
+    });
+    return data;
+  } catch (error) {
+    console.error('Error sending act chat message:', error);
+    throw error;
+  }
+};
+
+/**
+ * Act Chat API - MongoDB persistence
+ */
+
+/**
+ * Get or create an act chat
+ */
+export const getOrCreateActChat = async (actId, title, status, pdfUrl, summary) => {
+  try {
+    const data = await apiRequest('/act-chats/get-or-create', {
+      method: 'POST',
+      body: JSON.stringify({ actId, title, status, pdfUrl, summary }),
+    });
+    return data;
+  } catch (error) {
+    console.error('Error getting or creating act chat:', error);
+    throw error;
+  }
+};
+
+/**
+ * Get a specific act chat by actId
+ */
+export const getActChat = async (actId) => {
+  try {
+    const data = await apiRequest(`/act-chats/${actId}`);
+    return data;
+  } catch (error) {
+    console.error('Error getting act chat:', error);
+    throw error;
+  }
+};
+
+/**
+ * Add a message to an act chat
+ */
+export const addMessageToActChat = async (actId, messageData) => {
+  try {
+    const data = await apiRequest(`/act-chats/${actId}/message`, {
+      method: 'POST',
+      body: JSON.stringify(messageData),
+    });
+    return data;
+  } catch (error) {
+    console.error('Error adding message to act chat:', error);
+    throw error;
+  }
+};
+
+/**
+ * Update act chat summary
+ */
+export const updateActChatSummary = async (actId, summary) => {
+  try {
+    const data = await apiRequest(`/act-chats/${actId}/summary`, {
+      method: 'PATCH',
+      body: JSON.stringify({ summary }),
+    });
+    return data;
+  } catch (error) {
+    console.error('Error updating act chat summary:', error);
+    throw error;
+  }
+};
+
+/**
+ * Get user's recent act chats
+ */
+export const getUserRecentActChats = async (limit = 10) => {
+  try {
+    const data = await apiRequest(`/act-chats/user/recent?limit=${limit}`);
+    return data;
+  } catch (error) {
+    console.error('Error getting recent act chats:', error);
+    throw error;
+  }
+};
+
+/**
+ * Clear messages in an act chat
+ */
+export const clearActChatMessages = async (actId) => {
+  try {
+    const data = await apiRequest(`/act-chats/${actId}/messages`, {
+      method: 'DELETE',
+    });
+    return data;
+  } catch (error) {
+    console.error('Error clearing act chat messages:', error);
+    throw error;
+  }
+};
+
+/**
+ * Delete an act chat
+ */
+export const deleteActChat = async (actId) => {
+  try {
+    const data = await apiRequest(`/act-chats/${actId}`, {
+      method: 'DELETE',
+    });
+    return data;
+  } catch (error) {
+    console.error('Error deleting act chat:', error);
     throw error;
   }
 };
