@@ -1,16 +1,15 @@
 import { Pinecone } from '@pinecone-database/pinecone';
-import { GoogleGenerativeAI } from '@google/generative-ai';
-import { HfInference } from '@huggingface/inference';
+import OpenAI from 'openai';
 
 const pinecone = new Pinecone({
   apiKey: process.env.PINECONE_API_KEY,
 });
 
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+const openai = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY,
+});
 
-const hf = new HfInference(process.env.HUGGING_FACE_API_KEY);
-
-const EMBEDDING_DIMENSION = 768;
+const EMBEDDING_DIMENSION = 768; // OpenAI text-embedding-3-small dimension (truncated)
 
 
 export const getIndex = () => {
@@ -92,41 +91,22 @@ export const checkActExists = async (actId) => {
   }
 };
 
-export const generateHuggingFaceEmbedding = async (text) => {
-  try {
-    console.log('Generating Hugging Face embedding...');
-    const result = await hf.featureExtraction({
-      model: 'sentence-transformers/all-mpnet-base-v2',
-      inputs: text,
-    });
-    
-    return Array.isArray(result) ? result : Array.from(result);
-  } catch (error) {
-    console.error('Hugging Face embedding failed:', error);
-    throw error;
-  }
-};
-
 export const generateEmbedding = async (text) => {
   try {
-    return await generateHuggingFaceEmbedding(text);
-  } catch (hfError) {
-    console.log('Hugging Face failed, trying Gemini as fallback...');
-    try {
-      const model = genAI.getGenerativeModel({ model: "embedding-001" });
-      const result = await model.embedContent(text);
-      return result.embedding.values;
-    } catch (geminiError) {
-      console.error('Both Hugging Face and Gemini embedding services failed');
-      throw new Error(`Embedding generation failed - HF: ${hfError.message}, Gemini: ${geminiError.message}`);
-    }
+    const response = await openai.embeddings.create({
+      model: "text-embedding-3-small",
+      input: text,
+      dimensions: 768,
+    });
+    return response.data[0].embedding;
+  } catch (error) {
+    console.error('OpenAI embedding failed:', error);
+    throw error;
   }
 };
 
 export const generateResponse = async (prompt, context = '') => {
   try {
-    const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
-    
     const fullPrompt = `
 Context from bill documents:
 ${context}
@@ -136,9 +116,13 @@ User question: ${prompt}
 Please provide a comprehensive answer based on the context provided above. If the context doesn't contain enough information to answer the question, please mention that and provide what information you can based on the available context.
 `;
 
-    const result = await model.generateContent(fullPrompt);
-    const response = await result.response;
-    return response.text();
+    const stream = await openai.chat.completions.create({
+      model: "gpt-4o",
+      messages: [{ role: "user", content: fullPrompt }],
+      stream: true,
+    });
+
+    return stream;
   } catch (error) {
     console.error('Error generating response:', error);
     throw error;
@@ -147,8 +131,6 @@ Please provide a comprehensive answer based on the context provided above. If th
 
 export const generateBillSummary = async (billContent) => {
   try {
-    const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
-    
     const prompt = `
 Please provide a comprehensive summary of this parliamentary bill. Include:
 1. Main purpose and objectives
@@ -163,9 +145,12 @@ ${billContent}
 Provide a well-structured summary that's informative yet accessible.
 `;
 
-    const result = await model.generateContent(prompt);
-    const response = await result.response;
-    return response.text();
+    const completion = await openai.chat.completions.create({
+      model: "gpt-4o",
+      messages: [{ role: "user", content: prompt }],
+    });
+
+    return completion.choices[0].message.content;
   } catch (error) {
     console.error('Error generating bill summary:', error);
     throw error;
@@ -174,8 +159,6 @@ Provide a well-structured summary that's informative yet accessible.
 
 export const generateActSummary = async (actContent) => {
   try {
-    const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
-    
     const prompt = `
 Please provide a comprehensive summary of this parliamentary act. Include:
 1. Main purpose and objectives
@@ -190,9 +173,12 @@ ${actContent}
 Provide a well-structured summary that's informative yet accessible.
 `;
 
-    const result = await model.generateContent(prompt);
-    const response = await result.response;
-    return response.text();
+    const completion = await openai.chat.completions.create({
+      model: "gpt-4o",
+      messages: [{ role: "user", content: prompt }],
+    });
+
+    return completion.choices[0].message.content;
   } catch (error) {
     console.error('Error generating act summary:', error);
     throw error;

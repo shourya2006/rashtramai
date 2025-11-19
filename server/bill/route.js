@@ -18,21 +18,44 @@ router.post('/', async (req, res) => {
       .map(match => match.metadata.content)
       .join('\n\n');
 
-    console.log('Generating response...');
-    const response = await generateResponse(message, context);
-
     const sources = similarContent.map(match => ({
       score: match.score,
       chunkIndex: match.metadata.chunkIndex,
       content: match.metadata.content.substring(0, 200) + '...',
     }));
 
-    res.json({ response, sources, billId });
+    // Set headers for SSE
+    res.setHeader('Content-Type', 'text/event-stream');
+    res.setHeader('Cache-Control', 'no-cache');
+    res.setHeader('Connection', 'keep-alive');
+
+    // Send initial data (sources and billId)
+    res.write(`data: ${JSON.stringify({ type: 'meta', sources, billId })}\n\n`);
+
+    console.log('Generating response...');
+    const stream = await generateResponse(message, context);
+
+    for await (const chunk of stream) {
+      const content = chunk.choices[0]?.delta?.content || '';
+      if (content) {
+        res.write(`data: ${JSON.stringify({ type: 'content', content })}\n\n`);
+      }
+    }
+
+    res.write('data: [DONE]\n\n');
+    res.end();
   } catch (error) {
     console.error('Error in chat:', error);
-    res.status(500).json({
-      error: `Failed to process chat: ${error.message}`,
-    });
+    // If headers haven't been sent yet, send JSON error
+    if (!res.headersSent) {
+      res.status(500).json({
+        error: `Failed to process chat: ${error.message}`,
+      });
+    } else {
+      // If headers sent, try to send error event
+      res.write(`data: ${JSON.stringify({ type: 'error', error: error.message })}\n\n`);
+      res.end();
+    }
   }
 });
 

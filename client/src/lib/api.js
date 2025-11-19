@@ -137,20 +137,75 @@ export const getBillSummary = async (billId) => {
 };
 
 /**
- * Send chat message
+ * Send chat message with streaming support
  */
-export const sendChatMessage = async (message, billId) => {
+export const sendChatMessageStream = async (message, billId, onChunk, onComplete, onError) => {
+  const token = getAuthToken();
+  if (!token) {
+    onError(new Error('No authentication token found. Please login.'));
+    return;
+  }
+
   try {
-    const data = await apiRequest('/chat', {
+    const response = await fetch(`${API_BASE_URL}/chat`, {
       method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'auth-token': token,
+      },
       body: JSON.stringify({ message, billId }),
     });
-    return data;
+
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({}));
+      throw new Error(error.message || `Request failed with status ${response.status}`);
+    }
+
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = '';
+    let sources = [];
+    let fullResponse = '';
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+
+      buffer += decoder.decode(value, { stream: true });
+      const lines = buffer.split('\n\n');
+      buffer = lines.pop() || '';
+
+      for (const line of lines) {
+        if (line.startsWith('data: ')) {
+          const data = line.slice(6);
+          if (data === '[DONE]') continue;
+
+          try {
+            const parsed = JSON.parse(data);
+            if (parsed.type === 'meta') {
+              sources = parsed.sources;
+            } else if (parsed.type === 'content') {
+              fullResponse += parsed.content;
+              onChunk(parsed.content);
+            } else if (parsed.type === 'error') {
+              throw new Error(parsed.error);
+            }
+          } catch (e) {
+            console.error('Error parsing SSE data:', e);
+          }
+        }
+      }
+    }
+
+    onComplete({ response: fullResponse, sources });
   } catch (error) {
     console.error('Error sending chat message:', error);
-    throw error;
+    onError(error);
   }
 };
+
+export const sendChatMessage = sendChatMessageStream; // Backward compatibility if needed, but better to use stream explicitly
+
 
 /**
  * Bill Chat API - MongoDB persistence
@@ -327,20 +382,75 @@ export const getActSummary = async (actId) => {
 };
 
 /**
- * Send act chat message
+ * Send act chat message with streaming support
  */
-export const sendActChatMessage = async (message, actId) => {
+export const sendActChatMessageStream = async (message, actId, onChunk, onComplete, onError) => {
+  const token = getAuthToken();
+  if (!token) {
+    onError(new Error('No authentication token found. Please login.'));
+    return;
+  }
+
   try {
-    const data = await apiRequest('/act-chat', {
+    const response = await fetch(`${API_BASE_URL}/act-chat`, {
       method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'auth-token': token,
+      },
       body: JSON.stringify({ message, actId }),
     });
-    return data;
+
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({}));
+      throw new Error(error.message || `Request failed with status ${response.status}`);
+    }
+
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = '';
+    let sources = [];
+    let fullResponse = '';
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+
+      buffer += decoder.decode(value, { stream: true });
+      const lines = buffer.split('\n\n');
+      buffer = lines.pop() || '';
+
+      for (const line of lines) {
+        if (line.startsWith('data: ')) {
+          const data = line.slice(6);
+          if (data === '[DONE]') continue;
+
+          try {
+            const parsed = JSON.parse(data);
+            if (parsed.type === 'meta') {
+              sources = parsed.sources;
+            } else if (parsed.type === 'content') {
+              fullResponse += parsed.content;
+              onChunk(parsed.content);
+            } else if (parsed.type === 'error') {
+              throw new Error(parsed.error);
+            }
+          } catch (e) {
+            console.error('Error parsing SSE data:', e);
+          }
+        }
+      }
+    }
+
+    onComplete({ response: fullResponse, sources });
   } catch (error) {
     console.error('Error sending act chat message:', error);
-    throw error;
+    onError(error);
   }
 };
+
+export const sendActChatMessage = sendActChatMessageStream;
+
 
 /**
  * Act Chat API - MongoDB persistence

@@ -77,8 +77,8 @@ const RegisterController = async (req, res) => {
       return res.status(400).json({ error: "User already exists with this email" });
     }
 
-    // Hash password with higher salt rounds for better security
-    const salt = await bcrypt.genSalt(12);
+
+    const salt = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash(password, salt);
 
     const user = await User.create({

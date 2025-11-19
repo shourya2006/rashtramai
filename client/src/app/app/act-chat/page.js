@@ -209,6 +209,21 @@ function ActChatContent() {
     setInputMessage("");
     setIsSending(true);
 
+    // Create a placeholder for the assistant's message
+    const assistantMessageId = Date.now();
+    const initialAssistantMessage = {
+      id: assistantMessageId,
+      text: "",
+      sender: "assistant",
+      timestamp: new Date().toLocaleTimeString([], {
+        hour: "2-digit",
+        minute: "2-digit",
+      }),
+      isStreaming: true,
+    };
+
+    setMessages((prev) => [...prev, initialAssistantMessage]);
+
     try {
       // Save user message to MongoDB
       try {
@@ -218,56 +233,72 @@ function ActChatContent() {
         console.warn("Failed to save user message to MongoDB:", dbError.message);
       }
 
-      // Get AI response
-      const response = await sendActChatMessage(
+      // Stream AI response
+      await sendActChatMessage(
         currentInput,
-        actData.actId.toString()
+        actData.actId.toString(),
+        (chunk) => {
+          setMessages((prev) => 
+            prev.map((msg) => 
+              msg.id === assistantMessageId 
+                ? { ...msg, text: msg.text + chunk } 
+                : msg
+            )
+          );
+        },
+        async (result) => {
+          // On complete
+          const finalAssistantMessage = {
+            ...initialAssistantMessage,
+            text: result.response,
+            sources: result.sources,
+            isStreaming: false,
+          };
+
+          setMessages((prev) => 
+            prev.map((msg) => 
+              msg.id === assistantMessageId 
+                ? finalAssistantMessage
+                : msg
+            )
+          );
+
+          // Save assistant message to MongoDB
+          try {
+            await addMessageToActChat(actData.actId.toString(), finalAssistantMessage);
+            console.log("💾 Assistant message saved to MongoDB");
+          } catch (dbError) {
+            console.warn("Failed to save assistant message to MongoDB:", dbError.message);
+          }
+          setIsSending(false);
+        },
+        (error) => {
+          // On error
+          console.error("Error sending message:", error);
+          const errorMessage = {
+            text: "Sorry, I encountered an error. Please try again.",
+            sender: "assistant",
+            timestamp: new Date().toLocaleTimeString([], {
+              hour: "2-digit",
+              minute: "2-digit",
+            }),
+            isError: true,
+          };
+          
+          setMessages((prev) => prev.filter(msg => msg.id !== assistantMessageId).concat(errorMessage));
+          
+          // Save error message to MongoDB
+          try {
+            addMessageToActChat(actData.actId.toString(), errorMessage);
+          } catch (dbError) {
+            console.warn("Failed to save error message to MongoDB:", dbError.message);
+          }
+          setIsSending(false);
+        }
       );
-
-      const assistantMessage = {
-        text: response.response || "I'm sorry, I couldn't generate a response.",
-        sender: "assistant",
-        timestamp: new Date().toLocaleTimeString([], {
-          hour: "2-digit",
-          minute: "2-digit",
-        }),
-        sources: response.sources,
-      };
-
-      const finalMessages = [...updatedMessagesWithUser, assistantMessage];
-      setMessages(finalMessages);
-      
-      // Save assistant message to MongoDB
-      try {
-        await addMessageToActChat(actData.actId.toString(), assistantMessage);
-        console.log("💾 Assistant message saved to MongoDB");
-      } catch (dbError) {
-        console.warn("Failed to save assistant message to MongoDB:", dbError.message);
-      }
       
     } catch (err) {
-      console.error("Error sending message:", err);
-      const errorMessage = {
-        text: "Sorry, I encountered an error. Please try again.",
-        sender: "assistant",
-        timestamp: new Date().toLocaleTimeString([], {
-          hour: "2-digit",
-          minute: "2-digit",
-        }),
-        isError: true,
-      };
-      
-      const finalMessages = [...updatedMessagesWithUser, errorMessage];
-      setMessages(finalMessages);
-      
-      // Save error message to MongoDB
-      try {
-        await addMessageToActChat(actData.actId.toString(), errorMessage);
-      } catch (dbError) {
-        console.warn("Failed to save error message to MongoDB:", dbError.message);
-      }
-      
-    } finally {
+      console.error("Error initiating chat:", err);
       setIsSending(false);
     }
   };

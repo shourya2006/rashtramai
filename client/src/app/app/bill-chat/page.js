@@ -287,10 +287,16 @@ function BillChatContent() {
         ? `Bill: "${currentBillData.title}"\nLast Q: "${lastUserMessage.substring(0, 100)}"\n3 follow-up questions as JSON array:`
         : `Bill: "${currentBillData.title}"\n3 starter questions as JSON array:`;
 
-      const response = await sendChatMessage(
-        prompt,
-        currentBillData.billId.toString()
-      );
+      // Wrap streaming call in a promise to get full response
+      const response = await new Promise((resolve, reject) => {
+        sendChatMessage(
+          prompt,
+          currentBillData.billId.toString(),
+          () => {}, // Ignore chunks for suggestions
+          (result) => resolve(result),
+          (error) => reject(error)
+        );
+      });
       
       // Try to parse JSON from the response
       let questions = [];
@@ -341,7 +347,6 @@ function BillChatContent() {
       }
     } catch (error) {
       console.error("Failed to generate suggestions:", error);
-      // Set default questions on error
       setSuggestedQuestions([
         "Can you explain the key provisions?",
         "What impact will this bill have?",
@@ -370,6 +375,21 @@ function BillChatContent() {
     setInputMessage("");
     setIsSending(true);
 
+    // Create a placeholder for the assistant's message
+    const assistantMessageId = Date.now();
+    const initialAssistantMessage = {
+      id: assistantMessageId,
+      text: "",
+      sender: "assistant",
+      timestamp: new Date().toLocaleTimeString([], {
+        hour: "2-digit",
+        minute: "2-digit",
+      }),
+      isStreaming: true,
+    };
+
+    setMessages((prev) => [...prev, initialAssistantMessage]);
+
     try {
       // Save user message to MongoDB
       try {
@@ -379,65 +399,75 @@ function BillChatContent() {
         console.warn("Failed to save user message to MongoDB:", dbError.message);
       }
 
-      // Get AI response
-      const response = await sendChatMessage(
+      // Stream AI response
+      await sendChatMessage(
         currentInput,
-        billData.billId.toString()
+        billData.billId.toString(),
+        (chunk) => {
+          setMessages((prev) => 
+            prev.map((msg) => 
+              msg.id === assistantMessageId 
+                ? { ...msg, text: msg.text + chunk } 
+                : msg
+            )
+          );
+        },
+        async (result) => {
+          // On complete
+          const finalAssistantMessage = {
+            ...initialAssistantMessage,
+            text: result.response,
+            sources: result.sources,
+            isStreaming: false,
+          };
+
+          setMessages((prev) => 
+            prev.map((msg) => 
+              msg.id === assistantMessageId 
+                ? finalAssistantMessage
+                : msg
+            )
+          );
+
+          // Save assistant message to MongoDB
+          try {
+            await addMessageToBillChat(billData.billId.toString(), finalAssistantMessage);
+            console.log("💾 Assistant message saved to MongoDB");
+          } catch (dbError) {
+            console.warn("Failed to save assistant message to MongoDB:", dbError.message);
+          }
+
+          // Generate new suggested questions after response
+          generateSuggestedQuestions();
+          setIsSending(false);
+        },
+        (error) => {
+          // On error
+          console.error("Error sending message:", error);
+          const errorMessage = {
+            text: "Sorry, I encountered an error. Please try again.",
+            sender: "assistant",
+            timestamp: new Date().toLocaleTimeString([], {
+              hour: "2-digit",
+              minute: "2-digit",
+            }),
+            isError: true,
+          };
+          
+          setMessages((prev) => prev.filter(msg => msg.id !== assistantMessageId).concat(errorMessage));
+          
+          // Save error message to MongoDB
+          try {
+            addMessageToBillChat(billData.billId.toString(), errorMessage);
+          } catch (dbError) {
+            console.warn("Failed to save error message to MongoDB:", dbError.message);
+          }
+          setIsSending(false);
+        }
       );
-
-      // Ensure response is a string, not an object
-      let responseText = response.response || "I'm sorry, I couldn't generate a response.";
-      if (typeof responseText === 'object') {
-        responseText = JSON.stringify(responseText);
-      }
-
-      const assistantMessage = {
-        text: responseText,
-        sender: "assistant",
-        timestamp: new Date().toLocaleTimeString([], {
-          hour: "2-digit",
-          minute: "2-digit",
-        }),
-        sources: response.sources,
-      };
-
-      const finalMessages = [...updatedMessagesWithUser, assistantMessage];
-      setMessages(finalMessages);
-      
-      // Save assistant message to MongoDB
-      try {
-        await addMessageToBillChat(billData.billId.toString(), assistantMessage);
-        console.log("💾 Assistant message saved to MongoDB");
-      } catch (dbError) {
-        console.warn("Failed to save assistant message to MongoDB:", dbError.message);
-      }
-
-      // Generate new suggested questions after response
-      generateSuggestedQuestions();
       
     } catch (err) {
-      console.error("Error sending message:", err);
-      const errorMessage = {
-        text: "Sorry, I encountered an error. Please try again.",
-        sender: "assistant",
-        timestamp: new Date().toLocaleTimeString([], {
-          hour: "2-digit",
-          minute: "2-digit",
-        }),
-        isError: true,
-      };
-      
-      const finalMessages = [...updatedMessagesWithUser, errorMessage];
-      setMessages(finalMessages);
-      
-      // Save error message to MongoDB
-      try {
-        await addMessageToBillChat(billData.billId.toString(), errorMessage);
-      } catch (dbError) {
-        console.warn("Failed to save error message to MongoDB:", dbError.message);
-      }
-      
-    } finally {
+      console.error("Error initiating chat:", err);
       setIsSending(false);
     }
   };
