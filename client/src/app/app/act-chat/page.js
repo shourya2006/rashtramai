@@ -14,29 +14,24 @@ import {
   ChevronDown,
   ChevronUp,
   ExternalLink,
-  List,
-  TrendingUp,
 } from "lucide-react";
 import {
-  processBill,
-  getBillSummary,
-  sendChatMessage,
-  getOrCreateBillChat,
-  getBillChat,
-  addMessageToBillChat,
-  updateBillChatSummary,
-  fetchRelatedBills,
+  processAct,
+  getActSummary,
+  sendActChatMessage,
+  getOrCreateActChat,
+  getActChat,
+  addMessageToActChat,
 } from "@/lib/api";
 import { useRouter } from "next/navigation";
-import ProtectedRoute from "@/components/ProtectedRoute";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import rehypeRaw from "rehype-raw";
 
-function BillChatContent() {
+function ActChatContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
-  const [billData, setBillData] = useState(null);
+  const [actData, setActData] = useState(null);
   const [summary, setSummary] = useState(null);
   const [messages, setMessages] = useState([]);
   const [inputMessage, setInputMessage] = useState("");
@@ -46,9 +41,6 @@ function BillChatContent() {
   const [showSummary, setShowSummary] = useState(true);
   const [isCachedSummary, setIsCachedSummary] = useState(false);
   const [isCachedChat, setIsCachedChat] = useState(false);
-  const [relatedBills, setRelatedBills] = useState([]);
-  const [loadingRelated, setLoadingRelated] = useState(false);
-  const [showRelated, setShowRelated] = useState(false);
   const [suggestedQuestions, setSuggestedQuestions] = useState([]);
   const [generatingSuggestions, setGeneratingSuggestions] = useState(false);
   const [showSuggestions, setShowSuggestions] = useState(true);
@@ -56,31 +48,31 @@ function BillChatContent() {
   const textareaRef = useRef(null);
 
   useEffect(() => {
-    const billParam = searchParams.get("bill");
-    if (billParam) {
+    const actParam = searchParams.get("act");
+    if (actParam) {
       try {
-        const parsed = JSON.parse(decodeURIComponent(billParam));
-        setBillData(parsed);
-        initializeBill(parsed);
+        const parsed = JSON.parse(decodeURIComponent(actParam));
+        setActData(parsed);
+        initializeAct(parsed);
       } catch (err) {
-        console.error("Error parsing bill data:", err);
-        setError("Invalid bill data");
+        console.error("Error parsing act data:", err);
+        setError("Invalid act data");
         setIsLoading(false);
       }
     } else {
-      setError("No bill data provided");
+      setError("No act data provided");
       setIsLoading(false);
     }
   }, [searchParams]);
 
-  const initializeBill = async (bill) => {
+  const initializeAct = async (act) => {
     try {
       setIsLoading(true);
       setError(null);
 
       try {
         console.log("Checking MongoDB for existing chat...");
-        const existingChatResult = await getBillChat(bill.billId.toString());
+        const existingChatResult = await getActChat(act.actId.toString());
 
         if (
           existingChatResult.success &&
@@ -117,45 +109,17 @@ function BillChatContent() {
         }
       }
 
-      let pdfUrl = bill.pdfUrl;
-      if (!pdfUrl && bill.link) {
-        console.log("Fetching PDF on-demand...");
-        try {
-          const pdfResponse = await fetch(
-            `${
-              process.env.NEXT_PUBLIC_API_URL || "http://localhost:5001/api"
-            }/bills/pdf?link=${encodeURIComponent(bill.link)}`,
-            {
-              headers: {
-                "auth-token":
-                  localStorage.getItem("auth-token") ||
-                  sessionStorage.getItem("auth-token"),
-              },
-            }
-          );
-          const pdfData = await pdfResponse.json();
-          if (pdfData.success && pdfData.pdf) {
-            pdfUrl = pdfData.pdf;
-            console.log("PDF fetched:", pdfUrl);
+      let pdfUrl = act.pdfUrl;
 
-            setBillData((prev) => ({ ...prev, pdfUrl: pdfUrl }));
-          } else {
-            console.warn("No PDF found for this bill");
-          }
-        } catch (pdfError) {
-          console.error("Failed to fetch PDF:", pdfError);
-        }
-      }
-
-      console.log("Processing bill...");
-      const processResult = await processBill(
-        bill.billId.toString(),
+      console.log("Processing act...");
+      const processResult = await processAct(
+        act.actId.toString(),
         pdfUrl,
-        bill.title
+        act.title
       );
 
       console.log("Fetching summary...");
-      const summaryResult = await getBillSummary(bill.billId.toString());
+      const summaryResult = await getActSummary(act.actId.toString());
       console.log("Summary result:", summaryResult);
 
       if (summaryResult && summaryResult.summary) {
@@ -168,7 +132,7 @@ function BillChatContent() {
 
         const initialMessages = [
           {
-            text: `I've analyzed **${bill.title}**. Feel free to ask me any questions about this bill!`,
+            text: `I've analyzed **${act.title}**. Feel free to ask me any questions about this act!`,
             sender: "assistant",
             timestamp: new Date().toLocaleTimeString([], {
               hour: "2-digit",
@@ -180,19 +144,16 @@ function BillChatContent() {
 
         try {
           console.log("Saving chat to MongoDB...");
-          const chatResult = await getOrCreateBillChat(
-            bill.billId.toString(),
-            bill.title,
-            bill.status,
+          const chatResult = await getOrCreateActChat(
+            act.actId.toString(),
+            act.title,
+            act.status,
             pdfUrl,
             summaryResult.summary
           );
 
           if (chatResult.chat && chatResult.chat.messages.length === 0) {
-            await addMessageToBillChat(
-              bill.billId.toString(),
-              initialMessages[0]
-            );
+            await addMessageToActChat(act.actId.toString(), initialMessages[0]);
           }
 
           console.log("Chat saved to MongoDB");
@@ -203,7 +164,7 @@ function BillChatContent() {
         console.log("No summary available in response:", summaryResult);
         const fallbackMessages = [
           {
-            text: `I'm ready to discuss **${bill.title}**. What would you like to know?`,
+            text: `I'm ready to discuss **${act.title}**. What would you like to know?`,
             sender: "assistant",
             timestamp: new Date().toLocaleTimeString([], {
               hour: "2-digit",
@@ -214,28 +175,25 @@ function BillChatContent() {
         setMessages(fallbackMessages);
 
         try {
-          await getOrCreateBillChat(
-            bill.billId.toString(),
-            bill.title,
-            bill.status,
-            bill.pdfUrl,
+          await getOrCreateActChat(
+            act.actId.toString(),
+            act.title,
+            act.status,
+            act.pdfUrl,
             null
           );
-          await addMessageToBillChat(
-            bill.billId.toString(),
-            fallbackMessages[0]
-          );
+          await addMessageToActChat(act.actId.toString(), fallbackMessages[0]);
         } catch (dbError) {
           console.warn("Failed to save to MongoDB:", dbError.message);
         }
       }
     } catch (err) {
-      console.error("Error initializing bill:", err);
-      setError(err.message || "Failed to load bill data");
+      console.error("Error initializing act:", err);
+      setError(err.message || "Failed to load act data");
       setMessages([
         {
           id: 1,
-          text: `I'm having trouble loading this bill. However, I can try to answer your questions about **${bill.title}** based on available information.`,
+          text: `I'm having trouble loading this act. However, I can try to answer your questions about **${act.title}** based on available information.`,
           sender: "assistant",
           timestamp: new Date().toLocaleTimeString([], {
             hour: "2-digit",
@@ -246,42 +204,22 @@ function BillChatContent() {
     } finally {
       setIsLoading(false);
 
-      if (bill.billId) {
-        fetchRelatedBillsData(bill.billId);
-      }
-
       setTimeout(() => {
-        generateSuggestedQuestions(bill);
+        generateSuggestedQuestions(act);
       }, 1000);
     }
   };
 
-  const fetchRelatedBillsData = async (billId) => {
-    try {
-      setLoadingRelated(true);
-      console.log("Fetching related bills...");
-      const response = await fetchRelatedBills(billId);
-      if (response.success && response.relatedBills) {
-        setRelatedBills(response.relatedBills);
-        console.log(`Found ${response.relatedBills.length} related bills`);
-      }
-    } catch (error) {
-      console.error("Failed to fetch related bills:", error);
-    } finally {
-      setLoadingRelated(false);
-    }
-  };
-
-  const generateSuggestedQuestions = async (billDataParam = null) => {
-    const currentBillData = billDataParam || billData;
+  const generateSuggestedQuestions = async (actDataParam = null) => {
+    const currentActData = actDataParam || actData;
 
     if (!showSuggestions) {
       console.log("Skipping suggestions - dropdown is closed");
       return;
     }
 
-    if (!currentBillData || !currentBillData.billId) {
-      console.log("Skipping suggestions - bill data not ready");
+    if (!currentActData || !currentActData.actId) {
+      console.log("Skipping suggestions - act data not ready");
       return;
     }
 
@@ -295,18 +233,16 @@ function BillChatContent() {
           : null;
 
       const prompt = lastUserMessage
-        ? `Bill: "${
-            currentBillData.title
-          }"\nLast Q: "${lastUserMessage.substring(
+        ? `Act: "${currentActData.title}"\nLast Q: "${lastUserMessage.substring(
             0,
             100
           )}"\n3 follow-up questions as JSON array:`
-        : `Bill: "${currentBillData.title}"\n3 starter questions as JSON array:`;
+        : `Act: "${currentActData.title}"\n3 starter questions as JSON array:`;
 
       const response = await new Promise((resolve, reject) => {
-        sendChatMessage(
+        sendActChatMessage(
           prompt,
-          currentBillData.billId.toString(),
+          currentActData.actId.toString(),
           () => {},
           (result) => resolve(result),
           (error) => reject(error)
@@ -366,7 +302,7 @@ function BillChatContent() {
       } else {
         // Fallback default questions
         setSuggestedQuestions([
-          "What are the main objectives of this bill?",
+          "What are the main objectives of this act?",
           "Who will be affected by this legislation?",
           "What are the key provisions and clauses?",
         ]);
@@ -375,8 +311,8 @@ function BillChatContent() {
       console.error("Failed to generate suggestions:", error);
       setSuggestedQuestions([
         "Can you explain the key provisions?",
-        "What impact will this bill have?",
-        "When is this bill expected to be implemented?",
+        "What impact will this act have?",
+        "When was this act implemented?",
       ]);
     } finally {
       setGeneratingSuggestions(false);
@@ -384,7 +320,7 @@ function BillChatContent() {
   };
 
   const handleSendMessage = async () => {
-    if (!inputMessage.trim() || isSending || !billData) return;
+    if (!inputMessage.trim() || isSending || !actData) return;
 
     const userMessage = {
       text: inputMessage,
@@ -418,7 +354,7 @@ function BillChatContent() {
 
     try {
       try {
-        await addMessageToBillChat(billData.billId.toString(), userMessage);
+        await addMessageToActChat(actData.actId.toString(), userMessage);
         console.log("User message saved to MongoDB");
       } catch (dbError) {
         console.warn(
@@ -427,9 +363,9 @@ function BillChatContent() {
         );
       }
 
-      await sendChatMessage(
+      await sendActChatMessage(
         currentInput,
-        billData.billId.toString(),
+        actData.actId.toString(),
         (chunk) => {
           setMessages((prev) =>
             prev.map((msg) =>
@@ -454,8 +390,8 @@ function BillChatContent() {
           );
 
           try {
-            await addMessageToBillChat(
-              billData.billId.toString(),
+            await addMessageToActChat(
+              actData.actId.toString(),
               finalAssistantMessage
             );
             console.log("Assistant message saved to MongoDB");
@@ -488,7 +424,7 @@ function BillChatContent() {
           );
 
           try {
-            addMessageToBillChat(billData.billId.toString(), errorMessage);
+            addMessageToActChat(actData.actId.toString(), errorMessage);
           } catch (dbError) {
             console.warn(
               "Failed to save error message to MongoDB:",
@@ -515,22 +451,22 @@ function BillChatContent() {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
-  if (!billData && !isLoading) {
+  if (!actData && !isLoading) {
     return (
       <div className="flex items-center justify-center h-full bg-gray-50">
         <div className="text-center">
           <AlertCircle className="w-16 h-16 text-red-500 mx-auto mb-4" />
           <h2 className="text-xl font-semibold text-gray-800 mb-2">
-            No Bill Selected
+            No Act Selected
           </h2>
           <p className="text-gray-600 mb-4">
-            Please select a bill from the bills page to start chatting.
+            Please select an act from the acts page to start chatting.
           </p>
           <button
-            onClick={() => router.push("/app")}
+            onClick={() => router.push("/app/acts")} // Assuming /app/acts exists, or just /app
             className="px-4 py-2 bg-[#B20F38] text-white rounded-lg hover:bg-[#8A0C2D] transition-colors"
           >
-            Go to Bills
+            Go to Acts
           </button>
         </div>
       </div>
@@ -539,9 +475,7 @@ function BillChatContent() {
 
   return (
     <div className="flex h-screen bg-gray-50">
-      {}
       <div className="flex flex-col flex-1">
-        {}
         <div className="bg-white border-b border-gray-200 px-6 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-3">
@@ -562,18 +496,18 @@ function BillChatContent() {
                 <FileText className="w-5 h-5 text-[#B20F38]" />
                 <div>
                   <h1 className="text-lg font-semibold text-gray-800 line-clamp-1">
-                    {billData?.title || "Loading..."}
+                    {actData?.title || "Loading..."}
                   </h1>
-                  {billData?.status && (
-                    <p className="text-xs text-gray-500">{billData.status}</p>
+                  {actData?.status && (
+                    <p className="text-xs text-gray-500">{actData.status}</p>
                   )}
                 </div>
               </div>
             </div>
             <div className="flex items-center space-x-2">
-              {billData?.pdfUrl && (
+              {actData?.pdfUrl && (
                 <button
-                  onClick={() => window.open(billData.pdfUrl, "_blank")}
+                  onClick={() => window.open(actData.pdfUrl, "_blank")}
                   className="flex items-center space-x-2 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
                 >
                   <ExternalLink className="w-4 h-4" />
@@ -591,37 +525,16 @@ function BillChatContent() {
                 <BarChart3 size={18} />
                 <span className="hidden sm:inline text-sm">Summary</span>
               </button>
-              <button
-                onClick={() => setShowRelated(!showRelated)}
-                className={`flex items-center space-x-2 px-4 py-2 rounded-lg font-medium transition-all duration-200 ${
-                  showRelated
-                    ? "bg-[#B20D38] text-white"
-                    : "bg-gray-100 text-gray-600 hover:bg-gray-200"
-                }`}
-              >
-                <TrendingUp size={18} />
-                <span className="hidden sm:inline text-sm">Related</span>
-                {relatedBills.length > 0 && (
-                  <span
-                    className={`text-xs px-1.5 py-0.5 rounded-full ${
-                      showRelated ? "bg-white/20" : "bg-[#B20D38] text-white"
-                    }`}
-                  >
-                    {relatedBills.length}
-                  </span>
-                )}
-              </button>
             </div>
           </div>
         </div>
 
-        {}
         <div className="flex-1 overflow-y-auto px-6 py-4 space-y-4">
           {isLoading ? (
             <div className="flex items-center justify-center h-full">
               <div className="text-center">
                 <Loader2 className="w-8 h-8 text-[#B20F38] animate-spin mx-auto mb-2" />
-                <p className="text-gray-600">Loading bill data...</p>
+                <p className="text-gray-600">Loading act data...</p>
               </div>
             </div>
           ) : (
@@ -678,7 +591,6 @@ function BillChatContent() {
           )}
         </div>
 
-        {}
         {!isLoading && (
           <div className="bg-gradient-to-r from-gray-50 to-white border-t border-gray-200">
             <button
@@ -766,7 +678,6 @@ function BillChatContent() {
           </div>
         )}
 
-        {}
         <div className="bg-white border-t border-gray-200 px-6 py-4">
           <div className="flex items-end space-x-3">
             <textarea
@@ -774,7 +685,7 @@ function BillChatContent() {
               value={inputMessage}
               onChange={(e) => setInputMessage(e.target.value)}
               onKeyPress={handleKeyPress}
-              placeholder="Ask anything about this bill..."
+              placeholder="Ask anything about this act..."
               disabled={isLoading || isSending}
               className="flex-1 resize-none border border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:border-[#B20F38] focus:ring-1 focus:ring-[#B20F38] disabled:bg-gray-100 disabled:cursor-not-allowed"
               rows={2}
@@ -795,13 +706,12 @@ function BillChatContent() {
         </div>
       </div>
 
-      {}
       {showSummary && (
         <div className="fixed md:static right-0 top-0 w-80 md:w-96 h-full bg-white border-l border-gray-200 flex flex-col z-20 shadow-lg animate-slide-in">
           <div className="px-6 py-4 bg-[#B20F38] flex justify-between items-center">
             <div className="flex items-center space-x-2">
               <BarChart3 size={20} className="text-white" />
-              <h3 className="text-lg font-semibold text-white">Bill Summary</h3>
+              <h3 className="text-lg font-semibold text-white">Act Summary</h3>
             </div>
             <button
               onClick={() => setShowSummary(false)}
@@ -835,102 +745,7 @@ function BillChatContent() {
               <div className="text-center text-gray-500 py-8">
                 <FileText className="w-12 h-12 mx-auto mb-3 text-gray-300" />
                 <p className="text-sm">
-                  Bill summary will appear here once processed.
-                </p>
-              </div>
-            )}
-          </div>
-        </div>
-      )}
-
-      {}
-      {showRelated && (
-        <div className="w-80 bg-white border-l border-gray-200 flex flex-col">
-          <div className="px-6 py-4 border-b border-gray-200">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-2">
-                <TrendingUp className="w-5 h-5 text-[#B20F38]" />
-                <h3 className="font-semibold text-gray-800">Related Bills</h3>
-              </div>
-              <button
-                onClick={() => setShowRelated(false)}
-                className="text-gray-400 hover:text-gray-600"
-              >
-                ✕
-              </button>
-            </div>
-            <p className="text-xs text-gray-500 mt-1">
-              AI-powered recommendations based on semantic similarity
-            </p>
-          </div>
-          <div className="flex-1 overflow-y-auto p-4">
-            {loadingRelated ? (
-              <div className="flex items-center justify-center h-32">
-                <div className="text-center">
-                  <Loader2 className="w-6 h-6 text-[#B20F38] animate-spin mx-auto mb-2" />
-                  <p className="text-xs text-gray-500">
-                    Finding related bills...
-                  </p>
-                </div>
-              </div>
-            ) : relatedBills.length > 0 ? (
-              <div className="space-y-3">
-                {relatedBills.map((bill, index) => (
-                  <div
-                    key={bill.billId}
-                    className="group bg-gradient-to-br from-gray-50 to-white border border-gray-200 rounded-lg p-3 hover:shadow-md hover:border-[#B20F38]/30 transition-all cursor-pointer"
-                    onClick={() => {
-                      const billData = {
-                        billId: bill.billId,
-                        title: bill.title,
-                        pdfUrl: bill.pdf,
-                        link: bill.link,
-                        status: bill.status,
-                      };
-                      window.open(
-                        `/app/bill-chat?bill=${encodeURIComponent(
-                          JSON.stringify(billData)
-                        )}`,
-                        "_blank"
-                      );
-                    }}
-                  >
-                    <div className="flex items-start justify-between gap-2 mb-2">
-                      <div className="flex-1">
-                        <div className="flex items-center gap-2 mb-1">
-                          <span className="text-xs font-bold text-[#B20F38]">
-                            #{index + 1}
-                          </span>
-                          <div className="flex items-center gap-1">
-                            <Sparkles className="w-3 h-3 text-amber-500" />
-                            <span className="text-xs font-semibold text-gray-600">
-                              {(bill.similarityScore * 100).toFixed(0)}% match
-                            </span>
-                          </div>
-                        </div>
-                        <h4 className="text-sm font-semibold text-gray-800 leading-tight group-hover:text-[#B20F38] transition-colors">
-                          {bill.title}
-                        </h4>
-                      </div>
-                      <ChevronRight className="w-4 h-4 text-gray-400 group-hover:text-[#B20F38] group-hover:translate-x-0.5 transition-all flex-shrink-0" />
-                    </div>
-                    {bill.status && (
-                      <div className="flex items-center justify-between mt-2">
-                        <span className="text-xs px-2 py-1 bg-gray-100 text-gray-600 rounded-full">
-                          {bill.status}
-                        </span>
-                        <span className="text-xs text-gray-400">Open →</span>
-                      </div>
-                    )}
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div className="text-center text-gray-500 py-8">
-                <List className="w-12 h-12 mx-auto mb-3 text-gray-300" />
-                <p className="text-sm">No related bills found</p>
-                <p className="text-xs text-gray-400 mt-1">
-                  Related bills will appear here once analyzed
+                  Act summary will appear here once processed.
                 </p>
               </div>
             )}
@@ -941,35 +756,16 @@ function BillChatContent() {
   );
 }
 
-export default function BillChatPage() {
+export default function ActChatPage() {
   return (
-    <ProtectedRoute>
-      <Suspense
-        fallback={
-          <div className="min-h-screen flex items-center justify-center bg-gray-50">
-            <div className="text-center">
-              <Loader2 className="w-8 h-8 animate-spin text-red-800 mx-auto mb-4" />
-              <p className="text-gray-600">Loading bill chat...</p>
-            </div>
-          </div>
-        }
-      >
-        <BillChatContent />
-      </Suspense>
-      <style jsx global>{`
-        @keyframes slide-in {
-          from {
-            transform: translateX(100%);
-          }
-          to {
-            transform: translateX(0);
-          }
-        }
-
-        .animate-slide-in {
-          animation: slide-in 0.3s ease-out;
-        }
-      `}</style>
-    </ProtectedRoute>
+    <Suspense
+      fallback={
+        <div className="flex items-center justify-center h-screen bg-gray-50">
+          <Loader2 className="w-8 h-8 text-[#B20F38] animate-spin" />
+        </div>
+      }
+    >
+      <ActChatContent />
+    </Suspense>
   );
 }
