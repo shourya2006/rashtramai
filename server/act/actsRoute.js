@@ -3,14 +3,14 @@ const cheerio = require("cheerio");
 const axios = require("axios");
 const router = express.Router();
 
-// In-memory cache for acts data
+
 let actsCache = {
   data: null,
   timestamp: null,
-  ttl: 5 * 60 * 1000, // 5 minutes cache
+  ttl: 5 * 60 * 1000, 
 };
 
-// Helper function to extract year from act title
+
 const extractYearFromTitle = (title) => {
   const yearMatch = title.match(/,?\s*(\d{4})/);
   return yearMatch ? parseInt(yearMatch[1]) : null;
@@ -30,7 +30,7 @@ router.get("/", async (req, res) => {
     let allActs = [];
     let uniqueYears = [];
     
-    // Check if cache is valid
+    
     const now = Date.now();
     const cacheValid = actsCache.data && actsCache.timestamp && (now - actsCache.timestamp) < actsCache.ttl;
     
@@ -40,13 +40,13 @@ router.get("/", async (req, res) => {
       uniqueYears = actsCache.data.years;
     } else {
       console.log('🔄 Fetching fresh acts data from PRS India...');
-      // Fetch main listing
+      
       const { data: body } = await axios.get(url, {
         headers: { "Cache-Control": "no-store" },
       });
       const $ = cheerio.load(body);
 
-      // Parse the new HTML structure
+      
       $(".view-content .views-row").each((i, el) => {
         const actTitle = $(el)
           .find(".views-field-title-field a")
@@ -70,13 +70,13 @@ router.get("/", async (req, res) => {
             id: i + 1,
             title: actTitle,
             year: year,
-            status: "Active", // Acts are generally active
-            pdf: fullPdfUrl, // Direct PDF link
+            status: "Active", 
+            pdf: fullPdfUrl, 
           });
         }
       });
 
-      // Extract unique years from all acts
+      
       const yearsSet = new Set();
       allActs.forEach((act) => {
         if (act.year && act.year >= 1900 && act.year <= new Date().getFullYear()) {
@@ -85,13 +85,13 @@ router.get("/", async (req, res) => {
       });
       uniqueYears = Array.from(yearsSet).sort((a, b) => b - a);
 
-      // Cache the data
+      
       actsCache.data = { acts: allActs, years: uniqueYears };
       actsCache.timestamp = now;
       console.log(`✅ Cached ${allActs.length} acts for 5 minutes`);
     }
 
-    // Filter by search query if provided
+    
     let filteredActs = allActs;
     if (searchQuery) {
       filteredActs = filteredActs.filter((act) =>
@@ -99,12 +99,12 @@ router.get("/", async (req, res) => {
       );
     }
 
-    // Filter by year if provided
+    
     if (yearFilter) {
       filteredActs = filteredActs.filter((act) => act.year === yearFilter);
     }
 
-    // Paginate
+    
     const paginatedActs = filteredActs.slice(skip, skip + limit);
 
     const totalActs = filteredActs.length;
@@ -138,10 +138,10 @@ router.get("/", async (req, res) => {
   }
 });
 
-// Get all unique years from acts (uses cache)
+
 router.get("/years", async (req, res) => {
   try {
-    // Check if cache is valid
+    
     const now = Date.now();
     const cacheValid = actsCache.data && actsCache.timestamp && (now - actsCache.timestamp) < actsCache.ttl;
     

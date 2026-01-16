@@ -38,7 +38,7 @@ const Login = () => {
   return (
     <PublicRoute>
       <div className="flex min-h-screen">
-      {/* Left side - Login form */}
+      {}
       <div className="w-full md:w-1/2 flex flex-col justify-center items-center p-8 bg-background">
         <div className="w-full max-w-md space-y-8">
           <div className="flex flex-col items-center">

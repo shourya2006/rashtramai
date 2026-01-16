@@ -4,11 +4,11 @@ const axios = require('axios');
 const RelatedBills = require('../models/RelatedBills');
 const router = express.Router();
 
-// In-memory cache for bills data
+
 let billsCache = {
   data: null,
   timestamp: null,
-  ttl: 5 * 60 * 1000, // 5 minutes cache
+  ttl: 5 * 60 * 1000, 
 };
 
 router.get('/', async (req, res) => {
@@ -25,7 +25,7 @@ router.get('/', async (req, res) => {
     let allBills = [];
     let uniqueStatuses = [];
     
-    // Check if cache is valid
+    
     const now = Date.now();
     const cacheValid = billsCache.data && billsCache.timestamp && (now - billsCache.timestamp) < billsCache.ttl;
     
@@ -35,7 +35,7 @@ router.get('/', async (req, res) => {
       uniqueStatuses = billsCache.data.statuses;
     } else {
       console.log('🔄 Fetching fresh bills data from PRS India...');
-      // Fetch main listing
+      
       const { data: body } = await axios.get(url, { headers: { 'Cache-Control': 'no-store' } });
       const $ = cheerio.load(body);
 
@@ -50,12 +50,12 @@ router.get('/', async (req, res) => {
             title: billTitle,
             link: baseUrl + detailLink,
             status: status || 'Unknown',
-            pdf: null, // PDF fetched on-demand for performance
+            pdf: null, 
           });
         }
       });
 
-      // Extract unique statuses from all bills
+      
       const statusesSet = new Set();
       allBills.forEach((bill) => {
         if (bill.status) {
@@ -64,13 +64,13 @@ router.get('/', async (req, res) => {
       });
       uniqueStatuses = Array.from(statusesSet).sort();
 
-      // Cache the data
+      
       billsCache.data = { bills: allBills, statuses: uniqueStatuses };
       billsCache.timestamp = now;
       console.log(`✅ Cached ${allBills.length} bills for 5 minutes`);
     }
 
-    // Filter by search query if provided
+    
     let filteredBills = allBills;
     if (searchQuery) {
       filteredBills = filteredBills.filter((bill) =>
@@ -78,12 +78,12 @@ router.get('/', async (req, res) => {
       );
     }
 
-    // Filter by status if provided
+    
     if (statusFilter && statusFilter !== 'All') {
       filteredBills = filteredBills.filter((bill) => bill.status === statusFilter);
     }
 
-    // Paginate
+    
     const paginatedBills = filteredBills.slice(skip, skip + limit);
 
     const totalBills = filteredBills.length;
@@ -117,10 +117,10 @@ router.get('/', async (req, res) => {
   }
 });
 
-// Get all unique statuses from bills (uses cache)
+
 router.get('/status', async (req, res) => {
   try {
-    // Check if cache is valid
+    
     const now = Date.now();
     const cacheValid = billsCache.data && billsCache.timestamp && (now - billsCache.timestamp) < billsCache.ttl;
     
@@ -164,7 +164,7 @@ router.get('/status', async (req, res) => {
   }
 });
 
-// Get PDF link for a specific bill (on-demand)
+
 router.get('/pdf', async (req, res) => {
   const { link } = req.query;
   
@@ -195,7 +195,7 @@ router.get('/pdf', async (req, res) => {
   }
 });
 
-// Get related bills based on billId using AI vector similarity
+
 router.get('/relatedBills', async (req, res) => {
   const { billId } = req.query;
   
@@ -204,7 +204,7 @@ router.get('/relatedBills', async (req, res) => {
   }
 
   try {
-    // 1. Check MongoDB cache first (7 days validity)
+    
     const CACHE_VALIDITY_DAYS = 7;
     const cachedRelated = await RelatedBills.findOne({ billId: billId.toString() });
     
@@ -227,7 +227,7 @@ router.get('/relatedBills', async (req, res) => {
       console.log('📝 No cache found, computing related bills...');
     }
 
-    // 2. Get current bill info from cache or fetch
+    
     const now = Date.now();
     const cacheValid = billsCache.data && billsCache.timestamp && (now - billsCache.timestamp) < billsCache.ttl;
     
@@ -269,11 +269,11 @@ router.get('/relatedBills', async (req, res) => {
       });
     }
 
-    // 3. Use AI vector similarity to find related bills
+    
     const { findSimilarBills } = await import('../lib/vectordb.js');
     const similarBills = await findSimilarBills(billId.toString(), currentBill.title, 5);
     
-    // 4. Enrich with bill details from allBills
+    
     const enrichedRelatedBills = similarBills.map(similar => {
       const billDetails = allBills.find(b => b.id.toString() === similar.billId);
       return {
@@ -286,7 +286,7 @@ router.get('/relatedBills', async (req, res) => {
       };
     });
 
-    // 5. Save to MongoDB cache
+    
     await RelatedBills.findOneAndUpdate(
       { billId: billId.toString() },
       {

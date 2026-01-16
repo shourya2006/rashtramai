@@ -17,14 +17,14 @@ const googleLoginController = async (req, res) => {
       issuer: 'rashtram-ai',
       audience: 'rashtram-ai-client'
     });
-    // res.status(200).json({ 
-    //   token,
-    //   user: {
-    //     id: req.user._id,
-    //     name: req.user.name,
-    //     email: req.user.email
-    //   }
-    // });
+    
+    
+    
+    
+    
+    
+    
+    
     res.redirect('http://localhost:3000/app?token='+token);
     }catch(error){
         console.error('Google Login error:', error);

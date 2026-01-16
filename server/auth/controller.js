@@ -17,7 +17,7 @@ const LoginController = async (req, res) => {
   const { email, password } = req.body;
 
   try {
-    // Sanitize email input
+    
     const sanitizedEmail = email.toLowerCase().trim();
     
     const user = await User.findOne({ email: sanitizedEmail });
@@ -36,7 +36,7 @@ const LoginController = async (req, res) => {
       },
     };
     
-    // Sign token with expiration
+    
     let authToken = jwt.sign(data, SecretKey, { 
       expiresIn: '24h',
       issuer: 'rashtram-ai',
@@ -67,11 +67,11 @@ const RegisterController = async (req, res) => {
   const { name, email, password } = req.body;
 
   try {
-    // Sanitize inputs
+    
     const sanitizedName = name.trim();
     const sanitizedEmail = email.toLowerCase().trim();
 
-    // Check if user already exists
+    
     const existingUser = await User.findOne({ email: sanitizedEmail });
     if (existingUser) {
       return res.status(400).json({ error: "User already exists with this email" });
@@ -93,7 +93,7 @@ const RegisterController = async (req, res) => {
       },
     };
     
-    // Sign token with expiration
+    
     let authToken = jwt.sign(data, SecretKey, { 
       expiresIn: '24h',
       issuer: 'rashtram-ai',

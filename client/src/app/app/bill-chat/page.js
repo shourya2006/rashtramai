@@ -51,7 +51,7 @@ function BillChatContent() {
   const [showRelated, setShowRelated] = useState(false);
   const [suggestedQuestions, setSuggestedQuestions] = useState([]);
   const [generatingSuggestions, setGeneratingSuggestions] = useState(false);
-  const [showSuggestions, setShowSuggestions] = useState(true); // Dropdown state
+  const [showSuggestions, setShowSuggestions] = useState(true); 
   const messagesEndRef = useRef(null);
   const textareaRef = useRef(null);
 
@@ -79,7 +79,6 @@ function BillChatContent() {
       setIsLoading(true);
       setError(null);
 
-      // First, try to get existing chat from MongoDB
       try {
         console.log("📥 Checking MongoDB for existing chat...");
         const existingChatResult = await getBillChat(bill.billId.toString());
@@ -87,7 +86,7 @@ function BillChatContent() {
         if (existingChatResult.success && existingChatResult.chat && existingChatResult.chat.messages.length > 0) {
           console.log("✅ Loaded chat from MongoDB (instant sync)");
           setSummary(existingChatResult.chat.summary);
-          // Ensure all messages have text as string
+          
           const sanitizedMessages = existingChatResult.chat.messages.map(msg => ({
             ...msg,
             text: typeof msg.text === 'object' ? JSON.stringify(msg.text) : msg.text
@@ -100,7 +99,7 @@ function BillChatContent() {
           console.log("📝 No existing chat found, will create new one");
         }
       } catch (dbError) {
-        // 404 or other errors - chat doesn't exist yet or DB unavailable
+        
         if (dbError.message.includes('404')) {
           console.log("📝 Chat not found in MongoDB, creating new one");
         } else {
@@ -108,7 +107,7 @@ function BillChatContent() {
         }
       }
 
-      // Fetch PDF if not available (on-demand fetching)
+      
       let pdfUrl = bill.pdfUrl;
       if (!pdfUrl && bill.link) {
         console.log("📄 Fetching PDF on-demand...");
@@ -122,7 +121,7 @@ function BillChatContent() {
           if (pdfData.success && pdfData.pdf) {
             pdfUrl = pdfData.pdf;
             console.log("✅ PDF fetched:", pdfUrl);
-            // Update billData state with the fetched PDF
+            
             setBillData(prev => ({ ...prev, pdfUrl: pdfUrl }));
           } else {
             console.warn("⚠️ No PDF found for this bill");
@@ -132,7 +131,7 @@ function BillChatContent() {
         }
       }
 
-      // First, process the bill to ensure it's in the vector DB
+      
       console.log("Processing bill...");
       const processResult = await processBill(
         bill.billId.toString(),
@@ -140,7 +139,7 @@ function BillChatContent() {
         bill.title
       );
 
-      // Get the summary
+      
       console.log("Fetching summary...");
       const summaryResult = await getBillSummary(bill.billId.toString());
       console.log("Summary result:", summaryResult);
@@ -150,7 +149,7 @@ function BillChatContent() {
         setSummary(summaryResult.summary);
         setIsCachedSummary(false);
         
-        // Add welcome message
+        
         const initialMessages = [
           {
             text: `I've analyzed **${bill.title}**. Feel free to ask me any questions about this bill!`,
@@ -163,7 +162,7 @@ function BillChatContent() {
         ];
         setMessages(initialMessages);
         
-        // Save to MongoDB
+        
         try {
           console.log("💾 Saving chat to MongoDB...");
           const chatResult = await getOrCreateBillChat(
@@ -174,7 +173,7 @@ function BillChatContent() {
             summaryResult.summary
           );
           
-          // Add initial message to MongoDB
+          
           if (chatResult.chat && chatResult.chat.messages.length === 0) {
             await addMessageToBillChat(bill.billId.toString(), initialMessages[0]);
           }
@@ -198,7 +197,7 @@ function BillChatContent() {
         ];
         setMessages(fallbackMessages);
         
-        // Save fallback to MongoDB
+        
         try {
           await getOrCreateBillChat(
             bill.billId.toString(),
@@ -229,12 +228,12 @@ function BillChatContent() {
     } finally {
       setIsLoading(false);
       
-      // Fetch related bills after initialization
+      
       if (bill.billId) {
         fetchRelatedBillsData(bill.billId);
       }
 
-      // Generate initial suggested questions - pass bill data directly
+      
       setTimeout(() => {
         generateSuggestedQuestions(bill);
       }, 1000);
@@ -258,16 +257,16 @@ function BillChatContent() {
   };
 
   const generateSuggestedQuestions = async (billDataParam = null) => {
-    // Use parameter if provided, otherwise use state
+    
     const currentBillData = billDataParam || billData;
     
-    // Don't generate if dropdown is closed
+    
     if (!showSuggestions) {
       console.log("⚠️ Skipping suggestions - dropdown is closed");
       return;
     }
     
-    // Don't generate if bill data is not loaded yet
+    
     if (!currentBillData || !currentBillData.billId) {
       console.log("⚠️ Skipping suggestions - bill data not ready");
       return;
@@ -277,8 +276,8 @@ function BillChatContent() {
       setGeneratingSuggestions(true);
       console.log("💡 Generating suggested questions...");
       
-      // Ultra-minimal prompt to reduce token usage
-      // Only use last user message if exists, otherwise mark as initial
+      
+      
       const lastUserMessage = messages.length > 0 
         ? messages.filter(m => m.sender === 'user').slice(-1)[0]?.text 
         : null;
@@ -287,30 +286,30 @@ function BillChatContent() {
         ? `Bill: "${currentBillData.title}"\nLast Q: "${lastUserMessage.substring(0, 100)}"\n3 follow-up questions as JSON array:`
         : `Bill: "${currentBillData.title}"\n3 starter questions as JSON array:`;
 
-      // Wrap streaming call in a promise to get full response
+      
       const response = await new Promise((resolve, reject) => {
         sendChatMessage(
           prompt,
           currentBillData.billId.toString(),
-          () => {}, // Ignore chunks for suggestions
+          () => {}, 
           (result) => resolve(result),
           (error) => reject(error)
         );
       });
       
-      // Try to parse JSON from the response
+      
       let questions = [];
       try {
-        // Look for JSON array in the response
+        
         const jsonMatch = response.response.match(/\[[\s\S]*?\]/);
         if (jsonMatch) {
           const parsed = JSON.parse(jsonMatch[0]);
-          // Handle both array of strings and array of objects
+          
           questions = parsed.map(item => {
             if (typeof item === 'string') {
               return item;
             } else if (typeof item === 'object' && item !== null) {
-              // Extract question from object formats like {question: "...", answer: "..."}
+              
               return item.question || item.text || item.q || JSON.stringify(item);
             }
             return String(item);
@@ -318,7 +317,7 @@ function BillChatContent() {
         }
       } catch (e) {
         console.log("Failed to parse JSON, trying text parsing...");
-        // Fallback: split by newlines and clean up
+        
         const lines = response.response.split('\n');
         questions = lines
           .filter(line => {
@@ -391,7 +390,7 @@ function BillChatContent() {
     setMessages((prev) => [...prev, initialAssistantMessage]);
 
     try {
-      // Save user message to MongoDB
+      
       try {
         await addMessageToBillChat(billData.billId.toString(), userMessage);
         console.log("💾 User message saved to MongoDB");
@@ -399,7 +398,7 @@ function BillChatContent() {
         console.warn("Failed to save user message to MongoDB:", dbError.message);
       }
 
-      // Stream AI response
+      
       await sendChatMessage(
         currentInput,
         billData.billId.toString(),
@@ -413,7 +412,7 @@ function BillChatContent() {
           );
         },
         async (result) => {
-          // On complete
+          
           const finalAssistantMessage = {
             ...initialAssistantMessage,
             text: result.response,
@@ -429,7 +428,7 @@ function BillChatContent() {
             )
           );
 
-          // Save assistant message to MongoDB
+          
           try {
             await addMessageToBillChat(billData.billId.toString(), finalAssistantMessage);
             console.log("💾 Assistant message saved to MongoDB");
@@ -437,12 +436,12 @@ function BillChatContent() {
             console.warn("Failed to save assistant message to MongoDB:", dbError.message);
           }
 
-          // Generate new suggested questions after response
+          
           generateSuggestedQuestions();
           setIsSending(false);
         },
         (error) => {
-          // On error
+          
           console.error("Error sending message:", error);
           const errorMessage = {
             text: "Sorry, I encountered an error. Please try again.",
@@ -456,7 +455,7 @@ function BillChatContent() {
           
           setMessages((prev) => prev.filter(msg => msg.id !== assistantMessageId).concat(errorMessage));
           
-          // Save error message to MongoDB
+          
           try {
             addMessageToBillChat(billData.billId.toString(), errorMessage);
           } catch (dbError) {
@@ -507,15 +506,15 @@ function BillChatContent() {
 
   return (
     <div className="flex h-screen bg-gray-50">
-      {/* Main Chat Area */}
+      {}
       <div className="flex flex-col flex-1">
-        {/* Header */}
+        {}
         <div className="bg-white border-b border-gray-200 px-6 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-3">
               <button
                 onClick={() => {
-                  // Check if opened in new tab, close it; otherwise go back
+                  
                   if (window.history.length <= 1 || window.opener) {
                     window.close();
                   } else {
@@ -582,7 +581,7 @@ function BillChatContent() {
           </div>
         </div>
 
-      {/* Messages Area */}
+      {}
       <div className="flex-1 overflow-y-auto px-6 py-4 space-y-4">
         {isLoading ? (
           <div className="flex items-center justify-center h-full">
@@ -641,14 +640,14 @@ function BillChatContent() {
         )}
       </div>
 
-        {/* Suggested Questions */}
+        {}
         {!isLoading && (
           <div className="bg-gradient-to-r from-gray-50 to-white border-t border-gray-200">
             <button
               onClick={() => {
                 const newState = !showSuggestions;
                 setShowSuggestions(newState);
-                // Generate questions when opening dropdown if none exist
+                
                 if (newState && suggestedQuestions.length === 0 && !generatingSuggestions) {
                   generateSuggestedQuestions();
                 }
@@ -675,7 +674,7 @@ function BillChatContent() {
               <div className="px-6 pb-3">
             <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-transparent hover:scrollbar-thumb-gray-400">
               {generatingSuggestions ? (
-                // Skeleton loading with realistic content shapes
+                
                 <>
                   {[
                     { width: 'w-72', delay: '0ms' },
@@ -721,7 +720,7 @@ function BillChatContent() {
           </div>
         )}
 
-        {/* Input Area */}
+        {}
         <div className="bg-white border-t border-gray-200 px-6 py-4">
           <div className="flex items-end space-x-3">
             <textarea
@@ -750,7 +749,7 @@ function BillChatContent() {
         </div>
       </div>
 
-      {/* Summary Panel */}
+      {}
       {showSummary && (
         <div className="fixed md:static right-0 top-0 w-80 md:w-96 h-full bg-white border-l border-gray-200 flex flex-col z-20 shadow-lg animate-slide-in">
           <div className="px-6 py-4 bg-[#B20F38] flex justify-between items-center">
@@ -796,7 +795,7 @@ function BillChatContent() {
         </div>
       )}
 
-      {/* Related Bills Sidebar */}
+      {}
       {showRelated && (
         <div className="w-80 bg-white border-l border-gray-200 flex flex-col">
           <div className="px-6 py-4 border-b border-gray-200">

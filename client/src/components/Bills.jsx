@@ -33,10 +33,10 @@ export default function BillsSidebarUI() {
   const [totalBills, setTotalBills] = useState(0);
   const { isAuthenticated } = useAuth();
 
-  // Fetch initial bills from API
+  
   useEffect(() => {
     const loadInitialBills = async () => {
-      // Don't fetch if not authenticated
+      
       if (!isAuthenticated) {
         setLoading(false);
         return;
@@ -48,14 +48,14 @@ export default function BillsSidebarUI() {
         setPage(1);
         setBills([]);
         
-        const response = await fetchBills(1, 10, searchTerm, selectedStatus); // Fetch with search and status
+        const response = await fetchBills(1, 10, searchTerm, selectedStatus); 
         
         if (response && response.bills) {
           setBills(response.bills);
           setHasMore(response.pagination?.hasMore || false);
           setTotalBills(response.pagination?.total || 0);
           
-          // Update statuses list from response (preserve full list)
+          
           if (response.statuses && response.statuses.length > 0 && statuses.length === 0) {
             setStatuses(response.statuses);
           }
@@ -74,7 +74,7 @@ export default function BillsSidebarUI() {
       }
     };
 
-    // Debounce search
+    
     const timeoutId = setTimeout(() => {
       loadInitialBills();
     }, 300);
@@ -82,7 +82,7 @@ export default function BillsSidebarUI() {
     return () => clearTimeout(timeoutId);
   }, [isAuthenticated, searchTerm, selectedStatus]);
 
-  // Load more bills when scrolling
+  
   const loadMoreBills = async () => {
     if (loadingMore || !hasMore || !isAuthenticated) return;
 
@@ -103,10 +103,10 @@ export default function BillsSidebarUI() {
     }
   };
 
-  // Handle scroll event
+  
   const handleScroll = (e) => {
     const { scrollTop, scrollHeight, clientHeight } = e.target;
-    // Load more when scrolled to 80% of the content
+    
     if (scrollHeight - scrollTop <= clientHeight * 1.2 && hasMore && !loadingMore) {
       loadMoreBills();
     }
@@ -120,46 +120,46 @@ export default function BillsSidebarUI() {
   const getStatusIcon = (status) => {
     const statusLower = status?.toLowerCase() || '';
     
-    // Passed/Enacted
+    
     if (statusLower.includes('passed') || statusLower.includes('enacted') || statusLower.includes('assented')) {
       return { icon: CheckCircle2, color: "text-green-600", bg: "bg-green-50" };
     }
     
-    // Pending/Under Consideration
+    
     if (statusLower.includes('pending') || statusLower.includes('under consideration')) {
       return { icon: Hourglass, color: "text-amber-600", bg: "bg-amber-50" };
     }
     
-    // Introduced/Tabled
+    
     if (statusLower.includes('introduced') || statusLower.includes('tabled')) {
       return { icon: PlayCircle, color: "text-blue-600", bg: "bg-blue-50" };
     }
     
-    // Lapsed/Withdrawn
+    
     if (statusLower.includes('lapsed') || statusLower.includes('withdrawn')) {
       return { icon: MinusCircle, color: "text-orange-600", bg: "bg-orange-50" };
     }
     
-    // Rejected/Negatived
+    
     if (statusLower.includes('rejected') || statusLower.includes('negatived')) {
       return { icon: XCircle, color: "text-red-600", bg: "bg-red-50" };
     }
     
-    // Referred to Committee
+    
     if (statusLower.includes('referred') || statusLower.includes('committee')) {
       return { icon: GitBranch, color: "text-purple-600", bg: "bg-purple-50" };
     }
     
-    // On hold/Paused
+    
     if (statusLower.includes('hold') || statusLower.includes('paused')) {
       return { icon: PauseCircle, color: "text-slate-600", bg: "bg-slate-50" };
     }
     
-    // Default/Unknown
+    
     return { icon: AlertCircle, color: "text-gray-600", bg: "bg-gray-50" };
   };
 
-  // Skeleton loader component
+  
   const BillSkeleton = () => (
     <div className="bg-white border border-slate-200 rounded-lg p-3 animate-pulse">
       <div className="flex items-start justify-between gap-2 mb-2">
@@ -179,12 +179,12 @@ export default function BillsSidebarUI() {
     </div>
   );
 
-  // No client-side filtering needed - handled by server
+  
   const filteredBills = bills;
 
   return (
     <div className="h-full flex flex-col bg-gradient-to-b from-slate-50 to-white">
-      {/* Compact Header */}
+      {}
       <div className="p-4 border-b border-slate-200 bg-white/50 backdrop-blur-sm">
         <div className="flex items-center justify-between mb-3">
           <div className="flex items-center space-x-2">
@@ -207,7 +207,7 @@ export default function BillsSidebarUI() {
           </button>
         </div>
 
-        {/* Compact Search */}
+        {}
         <div className="relative mb-2">
           <Search
             size={14}
@@ -222,7 +222,7 @@ export default function BillsSidebarUI() {
           />
         </div>
 
-        {/* Filter Toggle */}
+        {}
         <button
           onClick={() => setShowFilters(!showFilters)}
           className="w-full flex items-center justify-between px-3 py-2 bg-slate-50 hover:bg-slate-100 rounded-lg transition-colors text-sm"
@@ -241,7 +241,7 @@ export default function BillsSidebarUI() {
           />
         </button>
 
-        {/* Expandable Filters */}
+        {}
         {showFilters && (
           <div className="mt-2 p-3 bg-white border border-slate-200 rounded-lg shadow-sm">
             <div className="flex items-center justify-between mb-2">
@@ -292,7 +292,7 @@ export default function BillsSidebarUI() {
         )}
       </div>
 
-      {/* Bills List */}
+      {}
       <div className="flex-1 overflow-y-auto p-3" onScroll={handleScroll}>
         {!isAuthenticated ? (
           <div className="text-center py-8">
@@ -337,7 +337,7 @@ export default function BillsSidebarUI() {
                 <div key={bill.id || idx} className="block group">
                   <div 
                     onClick={() => {
-                      // Navigate to bill chat with bill data (PDF fetched on-demand)
+                      
                       const billData = {
                         billId: bill.id,
                         title: bill.title,
@@ -384,7 +384,7 @@ export default function BillsSidebarUI() {
               );
             })}
             
-            {/* Loading more skeletons */}
+            {}
             {loadingMore && (
               <>
                 {Array.from({ length: 3 }).map((_, idx) => (
@@ -393,7 +393,7 @@ export default function BillsSidebarUI() {
               </>
             )}
             
-            {/* End of list message */}
+            {}
             {!loadingMore && !hasMore && filteredBills.length > 0 && (
               <div className="text-center py-4">
                 <p className="text-slate-400 text-xs">
@@ -405,7 +405,7 @@ export default function BillsSidebarUI() {
         )}
       </div>
 
-      {/* Footer Stats */}
+      {}
       <div className="p-3 border-t border-slate-200 bg-white/50">
         <div className="flex items-center justify-between text-xs text-slate-600">
           <span>

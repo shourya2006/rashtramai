@@ -58,14 +58,14 @@ const BillChatSchema = new mongoose.Schema({
     default: true,
   },
 }, {
-  timestamps: true, // Adds createdAt and updatedAt
+  timestamps: true, 
 });
 
-// Compound index for efficient queries
+
 BillChatSchema.index({ userId: 1, billId: 1 });
 BillChatSchema.index({ userId: 1, lastMessageAt: -1 });
 
-// Update lastMessageAt whenever messages are added
+
 BillChatSchema.pre('save', function(next) {
   if (this.messages && this.messages.length > 0) {
     this.lastMessageAt = new Date();
@@ -73,7 +73,7 @@ BillChatSchema.pre('save', function(next) {
   next();
 });
 
-// Static method to find or create a chat
+
 BillChatSchema.statics.findOrCreate = async function(userId, billData) {
   let chat = await this.findOne({ 
     userId, 
@@ -96,7 +96,7 @@ BillChatSchema.statics.findOrCreate = async function(userId, billData) {
   return chat;
 };
 
-// Instance method to add a message
+
 BillChatSchema.methods.addMessage = async function(messageData) {
   this.messages.push({
     text: messageData.text,
@@ -114,14 +114,14 @@ BillChatSchema.methods.addMessage = async function(messageData) {
   return this;
 };
 
-// Instance method to update summary
+
 BillChatSchema.methods.updateSummary = async function(summary) {
   this.summary = summary;
   await this.save();
   return this;
 };
 
-// Static method to get user's recent chats
+
 BillChatSchema.statics.getUserRecentChats = async function(userId, limit = 10) {
   return this.find({ 
     userId, 
@@ -133,7 +133,7 @@ BillChatSchema.statics.getUserRecentChats = async function(userId, limit = 10) {
     .lean();
 };
 
-// Static method to get chat by billId and userId
+
 BillChatSchema.statics.getChatByBill = async function(userId, billId) {
   return this.findOne({ 
     userId, 
@@ -142,7 +142,7 @@ BillChatSchema.statics.getChatByBill = async function(userId, billId) {
   }).lean();
 };
 
-// Instance method to clear messages (soft delete)
+
 BillChatSchema.methods.clearChat = async function() {
   this.messages = [];
   this.lastMessageAt = new Date();
@@ -150,7 +150,7 @@ BillChatSchema.methods.clearChat = async function() {
   return this;
 };
 
-// Instance method to deactivate chat (soft delete)
+
 BillChatSchema.methods.deactivate = async function() {
   this.isActive = false;
   await this.save();

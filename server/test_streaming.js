@@ -3,7 +3,7 @@ const http = require('http');
 const testStreaming = (path, body) => {
   const options = {
     hostname: 'localhost',
-    port: 5000, // Assuming server runs on port 5000
+    port: 5000, 
     path: path,
     method: 'POST',
     headers: {
@@ -31,21 +31,21 @@ const testStreaming = (path, body) => {
     console.error(`problem with request: ${e.message}`);
   });
 
-  // Write data to request body
+  
   req.write(JSON.stringify(body));
   req.end();
 };
 
-// Test Bill Chat
+
 testStreaming('/api/bill/chat', {
   message: 'What is the purpose of this bill?',
   billId: 'test-bill-id'
 });
 
-// Test Act Chat
-// setTimeout(() => {
-//   testStreaming('/api/act/chat', {
-//     message: 'What is the purpose of this act?',
-//     actId: 'test-act-id'
-//   });
-// }, 5000);
+
+
+
+
+
+
+

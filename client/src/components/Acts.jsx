@@ -32,10 +32,10 @@ export default function ActsSidebarUI() {
   const [totalActs, setTotalActs] = useState(0);
   const { isAuthenticated } = useAuth();
 
-  // Fetch initial acts from API (years are included in the response)
+  
   useEffect(() => {
     const loadInitialActs = async () => {
-      // Don't fetch if not authenticated
+      
       if (!isAuthenticated) {
         setLoading(false);
         return;
@@ -47,14 +47,14 @@ export default function ActsSidebarUI() {
         setPage(1);
         setActs([]);
         
-        const response = await fetchActs(1, 10, searchTerm, selectedYear); // Fetch with search and year filter
+        const response = await fetchActs(1, 10, searchTerm, selectedYear); 
         
         if (response && response.acts) {
           setActs(response.acts);
           setHasMore(response.pagination?.hasMore || false);
           setTotalActs(response.pagination?.total || 0);
           
-          // Set years from response (only on first load to keep full list)
+          
           if (response.years && selectedYear === "All") {
             setYears(response.years);
           }
@@ -73,7 +73,7 @@ export default function ActsSidebarUI() {
       }
     };
 
-    // Debounce search
+    
     const timeoutId = setTimeout(() => {
       loadInitialActs();
     }, 300);
@@ -81,7 +81,7 @@ export default function ActsSidebarUI() {
     return () => clearTimeout(timeoutId);
   }, [isAuthenticated, searchTerm, selectedYear]);
 
-  // Load more acts when scrolling
+  
   const loadMoreActs = async () => {
     if (loadingMore || !hasMore || !isAuthenticated) return;
 
@@ -102,7 +102,7 @@ export default function ActsSidebarUI() {
     }
   };
 
-  // Handle scroll event
+  
   const handleScroll = (e) => {
     const { scrollTop, scrollHeight, clientHeight } = e.target;
     if (scrollHeight - scrollTop <= clientHeight * 1.2 && hasMore && !loadingMore) {
@@ -117,41 +117,41 @@ export default function ActsSidebarUI() {
   const getStatusIcon = (status) => {
     const statusLower = status?.toLowerCase() || '';
     
-    // Enacted/Active
+    
     if (statusLower.includes('enacted') || statusLower.includes('active') || statusLower.includes('in force')) {
       return { icon: CheckCircle2, color: "text-green-600", bg: "bg-green-50" };
     }
     
-    // Amended
+    
     if (statusLower.includes('amended')) {
       return { icon: GitBranch, color: "text-blue-600", bg: "bg-blue-50" };
     }
     
-    // Repealed
+    
     if (statusLower.includes('repealed') || statusLower.includes('abolished')) {
       return { icon: XCircle, color: "text-red-600", bg: "bg-red-50" };
     }
     
-    // Pending/Under Review
+    
     if (statusLower.includes('pending') || statusLower.includes('under review')) {
       return { icon: Hourglass, color: "text-amber-600", bg: "bg-amber-50" };
     }
     
-    // Partially Enforced
+    
     if (statusLower.includes('partial')) {
       return { icon: MinusCircle, color: "text-orange-600", bg: "bg-orange-50" };
     }
     
-    // Suspended
+    
     if (statusLower.includes('suspended')) {
       return { icon: PauseCircle, color: "text-slate-600", bg: "bg-slate-50" };
     }
     
-    // Default/Unknown
+    
     return { icon: Scale, color: "text-gray-600", bg: "bg-gray-50" };
   };
 
-  // Skeleton loader component
+  
   const ActSkeleton = () => (
     <div className="bg-white border border-slate-200 rounded-lg p-3 animate-pulse">
       <div className="flex items-start justify-between gap-2 mb-2">
@@ -171,12 +171,12 @@ export default function ActsSidebarUI() {
     </div>
   );
 
-  // No client-side filtering needed - all filtering is done server-side now
+  
   const filteredActs = acts;
 
   return (
     <div className="h-full flex flex-col bg-gradient-to-b from-slate-50 to-white">
-      {/* Compact Header */}
+      {}
       <div className="p-4 border-b border-slate-200 bg-white/50 backdrop-blur-sm">
         <div className="flex items-center justify-between mb-3">
           <div className="flex items-center space-x-2">
@@ -199,7 +199,7 @@ export default function ActsSidebarUI() {
           </button>
         </div>
 
-        {/* Compact Search */}
+        {}
         <div className="relative mb-2">
           <Search
             size={14}
@@ -214,7 +214,7 @@ export default function ActsSidebarUI() {
           />
         </div>
 
-        {/* Filter Toggle */}
+        {}
         <button
           onClick={() => setShowFilters(!showFilters)}
           className="w-full flex items-center justify-between px-3 py-2 bg-slate-50 hover:bg-slate-100 rounded-lg transition-colors text-sm"
@@ -233,7 +233,7 @@ export default function ActsSidebarUI() {
           />
         </button>
 
-        {/* Expandable Filters */}
+        {}
         {showFilters && (
           <div className="mt-2 p-3 bg-white border border-slate-200 rounded-lg shadow-sm">
             <div className="flex items-center justify-between mb-2">
@@ -284,7 +284,7 @@ export default function ActsSidebarUI() {
         )}
       </div>
 
-      {/* Acts List */}
+      {}
       <div className="flex-1 overflow-y-auto p-3" onScroll={handleScroll}>
         {!isAuthenticated ? (
           <div className="text-center py-8">
@@ -331,7 +331,7 @@ export default function ActsSidebarUI() {
                   <div 
                     onClick={() => {
                       if (hasPdf) {
-                        // Navigate to act chat with act data
+                        
                         const actData = {
                           actId: act.id,
                           title: act.title,
@@ -385,7 +385,7 @@ export default function ActsSidebarUI() {
               );
             })}
             
-            {/* Loading more skeletons */}
+            {}
             {loadingMore && (
               <>
                 {Array.from({ length: 3 }).map((_, idx) => (
@@ -394,7 +394,7 @@ export default function ActsSidebarUI() {
               </>
             )}
             
-            {/* End of list message */}
+            {}
             {!loadingMore && !hasMore && filteredActs.length > 0 && (
               <div className="text-center py-4">
                 <p className="text-slate-400 text-xs">
@@ -406,7 +406,7 @@ export default function ActsSidebarUI() {
         )}
       </div>
 
-      {/* Footer Stats */}
+      {}
       <div className="p-3 border-t border-slate-200 bg-white/50">
         <div className="flex items-center justify-between text-xs text-slate-600">
           <span>

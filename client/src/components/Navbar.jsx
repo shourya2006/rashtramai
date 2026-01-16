@@ -64,7 +64,7 @@ const Navbar = () => {
             <span className="absolute bottom-0 left-0 w-0 h-0.5 bg-gray-900 transition-all duration-300 group-hover:w-full"></span>
           </Link>
           
-          {/* Conditional rendering based on authentication */}
+          {}
           {!loading && (
             <>
               {isAuthenticated ? (
@@ -156,7 +156,7 @@ const Navbar = () => {
               <span className="absolute bottom-0 left-0 w-0 h-0.5 bg-gray-900 transition-all duration-300 group-hover:w-full"></span>
             </Link>
             <div className="pt-4 flex flex-col space-y-4 mt-2">
-              {/* Mobile menu conditional rendering */}
+              {}
               {!loading && (
                 <>
                   {isAuthenticated ? (

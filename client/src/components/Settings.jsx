@@ -1,387 +1,116 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Settings,
   User,
-  Lock,
-  CreditCard,
-  Bell,
   Shield,
   HelpCircle,
+  Loader2,
 } from "lucide-react";
+import * as api from "@/lib/api";
 
 export default function SettingsPage() {
-  const [activeTab, setActiveTab] = useState("general");
-  const [fullName, setFullName] = useState("tujhse matlab");
-  const [callName, setCallName] = useState("tujhse matlab");
-  const [workFunction, setWorkFunction] = useState("");
-  const [preferences, setPreferences] = useState(
-    "e.g. ask clarifying questions before giving detailed answers"
-  );
-  const [notifications, setNotifications] = useState(true);
-  const [colorMode, setColorMode] = useState("light");
+  const [activeTab, setActiveTab] = useState("account");
+  const [loading, setLoading] = useState(true);
+  const [userData, setUserData] = useState(null);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    const fetchUser = async () => {
+      try {
+        const data = await api.getUser();
+        setUserData(data);
+      } catch (err) {
+        console.error("Failed to fetch user settings:", err);
+        setError("Failed to load user information");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchUser();
+  }, []);
 
   const menuItems = [
-    { id: "general", label: "General", icon: Settings },
     { id: "account", label: "Account", icon: User },
-    { id: "privacy", label: "Privacy", icon: Lock },
-    { id: "billing", label: "Billing", icon: CreditCard },
-    { id: "notifications", label: "Notifications", icon: Bell },
+    { id: "general", label: "General", icon: Settings },
     { id: "security", label: "Security", icon: Shield },
     { id: "support", label: "Help & Support", icon: HelpCircle },
   ];
 
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <Loader2 className="w-8 h-8 text-[#B20F38] animate-spin" />
+      </div>
+    );
+  }
+
   const renderContent = () => {
     switch (activeTab) {
-      case "general":
-        return (
-          <div className="space-y-6">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Full name
-              </label>
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full bg-gray-300 flex items-center justify-center text-gray-600 font-semibold">
-                  TM
-                </div>
-                <input
-                  type="text"
-                  value={fullName}
-                  onChange={(e) => setFullName(e.target.value)}
-                  className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500"
-                />
-              </div>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                What should Rashtram call you?
-              </label>
-              <input
-                type="text"
-                value={callName}
-                onChange={(e) => setCallName(e.target.value)}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                What best describes your work?
-              </label>
-              <select
-                value={workFunction}
-                onChange={(e) => setWorkFunction(e.target.value)}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 bg-white"
-              >
-                <option value="">Select your work function</option>
-                <option value="engineering">Engineering</option>
-                <option value="design">Design</option>
-                <option value="product">Product Management</option>
-                <option value="marketing">Marketing</option>
-                <option value="sales">Sales</option>
-                <option value="research">Research</option>
-                <option value="education">Education</option>
-                <option value="other">Other</option>
-              </select>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                What personal preferences should Rashtram consider in responses?
-              </label>
-              <p className="text-xs text-gray-500 mb-2">
-                Your preferences will apply to all conversations, within
-                Anthropic's guidelines.{" "}
-                <span className="text-red-800 underline cursor-pointer">
-                  Learn about preferences
-                </span>
-              </p>
-              <textarea
-                value={preferences}
-                onChange={(e) => setPreferences(e.target.value)}
-                rows={4}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 resize-none"
-              />
-            </div>
-          </div>
-        );
-
       case "account":
         return (
-          <div className="space-y-6">
+          <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
             <div>
-              <h3 className="text-lg font-semibold mb-4">
+              <h3 className="text-2xl font-bold text-gray-900 mb-6">
                 Account Information
               </h3>
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Email
-                  </label>
-                  <input
-                    type="email"
-                    defaultValue="tujhse@matlab.com"
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Username
-                  </label>
-                  <input
-                    type="text"
-                    defaultValue="tujhse_matlab"
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500"
-                  />
-                </div>
-                <button className="px-6 py-2 bg-red-800 text-white rounded-lg hover:bg-red-800 transition">
-                  Update Account
-                </button>
-              </div>
-            </div>
-            <div className="pt-6 border-t border-gray-200">
-              <h3 className="text-lg font-semibold mb-2">Delete Account</h3>
-              <p className="text-sm text-gray-600 mb-4">
-                Once you delete your account, there is no going back. Please be
-                certain.
-              </p>
-              <button className="px-6 py-2 border-2 border-red-800 text-red-800 rounded-lg hover:bg-red-50 transition">
-                Delete Account
-              </button>
-            </div>
-          </div>
-        );
-
-      case "privacy":
-        return (
-          <div className="space-y-6">
-            <div>
-              <h3 className="text-lg font-semibold mb-4">Privacy Settings</h3>
-              <div className="space-y-4">
-                <div className="flex items-center justify-between p-4 border border-gray-200 rounded-lg">
-                  <div>
-                    <h4 className="font-medium">Share usage data</h4>
-                    <p className="text-sm text-gray-600">
-                      Help improve Rashtram by sharing anonymized usage data
-                    </p>
+              <div className="space-y-6 max-w-2xl">
+                <div className="flex items-center gap-6 p-6 bg-white border border-gray-100 rounded-2xl shadow-sm">
+                  <div className="w-20 h-20 rounded-full bg-[#B20F38] flex items-center justify-center text-white text-2xl font-bold shadow-lg shadow-red-900/20">
+                    {userData?.name ? userData.name.substring(0, 2).toUpperCase() : "U"}
                   </div>
-                  <label className="relative inline-flex items-center cursor-pointer">
+                  <div>
+                    <h4 className="text-xl font-semibold text-gray-900">{userData?.name || "User"}</h4>
+                    <p className="text-gray-500">{userData?.email || "email@example.com"}</p>
+                  </div>
+                </div>
+
+                <div className="grid gap-6">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2 ml-1">
+                      Full Name
+                    </label>
                     <input
-                      type="checkbox"
-                      className="sr-only peer"
-                      defaultChecked
+                      type="text"
+                      defaultValue={userData?.name}
+                      readOnly
+                      className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-gray-600 focus:outline-none cursor-not-allowed"
                     />
-                    <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-red-500 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-red-800"></div>
-                  </label>
-                </div>
-                <div className="flex items-center justify-between p-4 border border-gray-200 rounded-lg">
-                  <div>
-                    <h4 className="font-medium">Conversation history</h4>
-                    <p className="text-sm text-gray-600">
-                      Save your conversation history for future reference
-                    </p>
                   </div>
-                  <label className="relative inline-flex items-center cursor-pointer">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2 ml-1">
+                      Email Address
+                    </label>
                     <input
-                      type="checkbox"
-                      className="sr-only peer"
-                      defaultChecked
+                      type="email"
+                      defaultValue={userData?.email}
+                      readOnly
+                      className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-gray-600 focus:outline-none cursor-not-allowed"
                     />
-                    <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-red-500 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-red-800"></div>
-                  </label>
-                </div>
-                <div className="flex items-center justify-between p-4 border border-gray-200 rounded-lg">
-                  <div>
-                    <h4 className="font-medium">Training data opt-out</h4>
-                    <p className="text-sm text-gray-600">
-                      Opt out of having your conversations used for training
-                    </p>
                   </div>
-                  <label className="relative inline-flex items-center cursor-pointer">
-                    <input type="checkbox" className="sr-only peer" />
-                    <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-red-500 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-red-800"></div>
-                  </label>
                 </div>
               </div>
             </div>
           </div>
         );
 
-      case "billing":
+      case "general":
         return (
-          <div className="space-y-6">
-            <div>
-              <h3 className="text-lg font-semibold mb-4">Subscription Plan</h3>
-              <div className="p-6 border-2 border-red-800 rounded-lg bg-red-50">
-                <div className="flex items-center justify-between mb-4">
-                  <div>
-                    <h4 className="text-xl font-bold">Pro Plan</h4>
-                    <p className="text-gray-600">$20/month</p>
-                  </div>
-                  <span className="px-3 py-1 bg-red-800 text-white rounded-full text-sm font-medium">
-                    Active
-                  </span>
-                </div>
-                <p className="text-sm text-gray-700 mb-4">
-                  Next billing date: November 21, 2025
-                </p>
-                <button className="px-6 py-2 border-2 border-red-800 text-red-800 rounded-lg hover:bg-white transition">
-                  Manage Subscription
-                </button>
-              </div>
-            </div>
-            <div>
-              <h3 className="text-lg font-semibold mb-4">Payment Method</h3>
-              <div className="p-4 border border-gray-200 rounded-lg flex items-center justify-between">
-                <div className="flex items-center gap-4">
-                  <div className="w-12 h-8 bg-gradient-to-r from-blue-400 to-blue-600 rounded"></div>
-                  <div>
-                    <p className="font-medium">•••• •••• •••• 4242</p>
-                    <p className="text-sm text-gray-600">Expires 12/2026</p>
-                  </div>
-                </div>
-                <button className="text-red-800 font-medium hover:underline">
-                  Edit
-                </button>
-              </div>
-            </div>
-            <div>
-              <h3 className="text-lg font-semibold mb-4">Billing History</h3>
-              <div className="space-y-2">
-                {["October 2025", "September 2025", "August 2025"].map(
-                  (month, idx) => (
-                    <div
-                      key={idx}
-                      className="p-4 border border-gray-200 rounded-lg flex items-center justify-between"
-                    >
-                      <div>
-                        <p className="font-medium">{month}</p>
-                        <p className="text-sm text-gray-600">$20.00</p>
-                      </div>
-                      <button className="text-red-800 font-medium hover:underline">
-                        Download
-                      </button>
-                    </div>
-                  )
-                )}
-              </div>
-            </div>
-          </div>
-        );
-
-      case "notifications":
-        return (
-          <div className="space-y-6">
-            <div>
-              <h3 className="text-lg font-semibold mb-4">
-                Notification Preferences
+          <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+             <div>
+              <h3 className="text-2xl font-bold text-gray-900 mb-6">
+                General Preferences
               </h3>
-              <div className="space-y-4">
-                <div className="flex items-center justify-between p-4 border border-gray-200 rounded-lg">
-                  <div>
-                    <h4 className="font-medium">Response completions</h4>
-                    <p className="text-sm text-gray-600">
-                      Get notified when Rashtram has finished a response. Most
-                      useful for long-running tasks like tool calls and
-                      Research.
-                    </p>
-                  </div>
-                  <label className="relative inline-flex items-center cursor-pointer">
-                    <input
-                      type="checkbox"
-                      className="sr-only peer"
-                      checked={notifications}
-                      onChange={(e) => setNotifications(e.target.checked)}
-                    />
-                    <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-red-500 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-red-800"></div>
+              <div className="space-y-6 max-w-2xl">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2 ml-1">
+                    Theme
                   </label>
-                </div>
-                <div className="flex items-center justify-between p-4 border border-gray-200 rounded-lg">
-                  <div>
-                    <h4 className="font-medium">Email notifications</h4>
-                    <p className="text-sm text-gray-600">
-                      Receive important updates and announcements via email
-                    </p>
-                  </div>
-                  <label className="relative inline-flex items-center cursor-pointer">
-                    <input
-                      type="checkbox"
-                      className="sr-only peer"
-                      defaultChecked
-                    />
-                    <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-red-500 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-red-800"></div>
-                  </label>
-                </div>
-                <div className="flex items-center justify-between p-4 border border-gray-200 rounded-lg">
-                  <div>
-                    <h4 className="font-medium">Product updates</h4>
-                    <p className="text-sm text-gray-600">
-                      Get notified about new features and improvements
-                    </p>
-                  </div>
-                  <label className="relative inline-flex items-center cursor-pointer">
-                    <input
-                      type="checkbox"
-                      className="sr-only peer"
-                      defaultChecked
-                    />
-                    <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-red-500 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-red-800"></div>
-                  </label>
-                </div>
-              </div>
-            </div>
-          </div>
-        );
-
-      case "capabilities":
-        return (
-          <div className="space-y-6">
-            <div>
-              <h3 className="text-lg font-semibold mb-4">
-                Feature Capabilities
-              </h3>
-              <div className="space-y-4">
-                <div className="p-4 border border-gray-200 rounded-lg">
-                  <h4 className="font-medium mb-2">Web Search</h4>
-                  <p className="text-sm text-gray-600 mb-3">
-                    Allow Rashtram to search the web for up-to-date information
-                  </p>
-                  <label className="relative inline-flex items-center cursor-pointer">
-                    <input
-                      type="checkbox"
-                      className="sr-only peer"
-                      defaultChecked
-                    />
-                    <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-red-500 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-red-800"></div>
-                  </label>
-                </div>
-                <div className="p-4 border border-gray-200 rounded-lg">
-                  <h4 className="font-medium mb-2">Code Execution</h4>
-                  <p className="text-sm text-gray-600 mb-3">
-                    Enable Rashtram to run code and analyze data
-                  </p>
-                  <label className="relative inline-flex items-center cursor-pointer">
-                    <input
-                      type="checkbox"
-                      className="sr-only peer"
-                      defaultChecked
-                    />
-                    <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-red-500 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-red-800"></div>
-                  </label>
-                </div>
-                <div className="p-4 border border-gray-200 rounded-lg">
-                  <h4 className="font-medium mb-2">File Analysis</h4>
-                  <p className="text-sm text-gray-600 mb-3">
-                    Allow Rashtram to analyze uploaded files and documents
-                  </p>
-                  <label className="relative inline-flex items-center cursor-pointer">
-                    <input
-                      type="checkbox"
-                      className="sr-only peer"
-                      defaultChecked
-                    />
-                    <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-red-500 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-red-800"></div>
-                  </label>
+                  <select className="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#B20F38]/20 focus:border-[#B20F38] transition-all">
+                    <option value="light">Light Mode</option>
+                    <option value="dark">Dark Mode</option>
+                    <option value="system">System Default</option>
+                  </select>
                 </div>
               </div>
             </div>
@@ -390,38 +119,17 @@ export default function SettingsPage() {
 
       case "security":
         return (
-          <div className="space-y-6">
+          <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
             <div>
-              <h3 className="text-lg font-semibold mb-4">Security Settings</h3>
-              <div className="space-y-4">
-                <div className="p-4 border border-gray-200 rounded-lg">
-                  <h4 className="font-medium mb-2">Change Password</h4>
-                  <p className="text-sm text-gray-600 mb-3">
+              <h3 className="text-2xl font-bold text-gray-900 mb-6">Security</h3>
+              <div className="space-y-4 max-w-2xl">
+                <div className="p-6 border border-gray-200 rounded-2xl hover:border-[#B20F38]/30 transition-colors group bg-white">
+                  <h4 className="font-semibold text-gray-900 mb-2 group-hover:text-[#B20F38] transition-colors">Change Password</h4>
+                  <p className="text-sm text-gray-500 mb-4">
                     Update your password to keep your account secure
                   </p>
-                  <button className="px-4 py-2 bg-red-800 text-white rounded-lg hover:bg-red-800 transition">
-                    Change Password
-                  </button>
-                </div>
-                <div className="flex items-center justify-between p-4 border border-gray-200 rounded-lg">
-                  <div>
-                    <h4 className="font-medium">Two-factor authentication</h4>
-                    <p className="text-sm text-gray-600">
-                      Add an extra layer of security to your account
-                    </p>
-                  </div>
-                  <label className="relative inline-flex items-center cursor-pointer">
-                    <input type="checkbox" className="sr-only peer" />
-                    <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-red-500 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-red-800"></div>
-                  </label>
-                </div>
-                <div className="p-4 border border-gray-200 rounded-lg">
-                  <h4 className="font-medium mb-2">Active Sessions</h4>
-                  <p className="text-sm text-gray-600 mb-3">
-                    Manage devices where you're currently logged in
-                  </p>
-                  <button className="text-red-800 font-medium hover:underline">
-                    View Active Sessions
+                  <button className="px-6 py-2.5 bg-gray-900 text-white rounded-xl hover:bg-[#B20F38] transition-all duration-300 font-medium text-sm shadow-lg shadow-gray-900/10 hover:shadow-red-900/20">
+                    Update Password
                   </button>
                 </div>
               </div>
@@ -431,110 +139,66 @@ export default function SettingsPage() {
 
       case "support":
         return (
-          <div className="space-y-6">
+          <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
             <div>
-              <h3 className="text-lg font-semibold mb-4">Help & Support</h3>
-              <div className="space-y-4">
-                <a
-                  href="#"
-                  className="block p-4 border border-gray-200 rounded-lg hover:border-red-800 transition"
-                >
-                  <h4 className="font-medium mb-1">Documentation</h4>
-                  <p className="text-sm text-gray-600">
-                    Browse our comprehensive guides and tutorials
-                  </p>
-                </a>
-                <a
-                  href="#"
-                  className="block p-4 border border-gray-200 rounded-lg hover:border-red-800 transition"
-                >
-                  <h4 className="font-medium mb-1">API Documentation</h4>
-                  <p className="text-sm text-gray-600">
-                    Learn how to integrate Rashtram into your applications
-                  </p>
-                </a>
-                <a
-                  href="#"
-                  className="block p-4 border border-gray-200 rounded-lg hover:border-red-800 transition"
-                >
-                  <h4 className="font-medium mb-1">Contact Support</h4>
-                  <p className="text-sm text-gray-600">
-                    Get help from our support team
-                  </p>
-                </a>
-                <a
-                  href="#"
-                  className="block p-4 border border-gray-200 rounded-lg hover:border-red-800 transition"
-                >
-                  <h4 className="font-medium mb-1">Community Forum</h4>
-                  <p className="text-sm text-gray-600">
-                    Connect with other Rashtram users
-                  </p>
-                </a>
-              </div>
-            </div>
-            <div className="pt-6 border-t border-gray-200">
-              <h3 className="text-lg font-semibold mb-4">About</h3>
-              <div className="space-y-2 text-sm text-gray-600">
-                <p>
-                  <strong>Version:</strong> Rashtram Sonnet 4.5
-                </p>
-                <p>
-                  <strong>Release Date:</strong> September 29, 2024
-                </p>
-                <p>
-                  <strong>Terms of Service:</strong>{" "}
-                  <a href="#" className="text-red-800 hover:underline">
-                    Read here
+              <h3 className="text-2xl font-bold text-gray-900 mb-6">Help & Support</h3>
+              <div className="grid gap-4 max-w-2xl">
+                {[
+                  { title: "Documentation", desc: "Browse our comprehensive guides" },
+                  { title: "Contact Support", desc: "Get help from our team" },
+                  { title: "Community", desc: "Connect with other users" }
+                ].map((item, i) => (
+                  <a
+                    key={i}
+                    href="#"
+                    className="block p-6 border border-gray-200 rounded-2xl hover:border-[#B20F38] hover:shadow-lg hover:shadow-red-900/5 transition-all duration-300 bg-white group"
+                  >
+                    <h4 className="font-semibold text-gray-900 mb-1 group-hover:text-[#B20F38] transition-colors">{item.title}</h4>
+                    <p className="text-sm text-gray-500">{item.desc}</p>
                   </a>
-                </p>
-                <p>
-                  <strong>Privacy Policy:</strong>{" "}
-                  <a href="#" className="text-red-800 hover:underline">
-                    Read here
-                  </a>
-                </p>
+                ))}
               </div>
             </div>
           </div>
         );
 
       default:
-        return <div>Select a menu item</div>;
+        return null;
     }
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="max-w-7xl mx-auto p-8">
-        <h1 className="text-3xl font-bold mb-8 text-gray-900">Settings</h1>
+    <div className="min-h-screen bg-gray-50/50">
+      <div className="max-w-7xl mx-auto p-6 md:p-12">
+        <h1 className="text-4xl font-bold mb-10 text-gray-900 tracking-tight">Settings</h1>
 
-        <div className="flex gap-6">
-          {/* Sidebar */}
-          <div className="w-64 bg-white rounded-lg shadow-sm p-4 h-fit">
-            <nav className="space-y-1">
+        <div className="flex flex-col md:flex-row gap-8">
+          {}
+          <div className="w-full md:w-72 shrink-0">
+            <nav className="space-y-2">
               {menuItems.map((item) => {
                 const Icon = item.icon;
+                const isActive = activeTab === item.id;
                 return (
                   <button
                     key={item.id}
                     onClick={() => setActiveTab(item.id)}
-                    className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition ${
-                      activeTab === item.id
-                        ? "bg-red-800 text-white"
-                        : "text-gray-700 hover:bg-gray-100"
+                    className={`w-full flex items-center gap-4 px-6 py-4 rounded-2xl transition-all duration-300 font-medium ${
+                      isActive
+                        ? "bg-[#B20F38] text-white shadow-xl shadow-red-900/20 scale-[1.02]"
+                        : "text-gray-600 hover:bg-white hover:shadow-md hover:text-[#B20F38] bg-transparent"
                     }`}
                   >
-                    <Icon size={20} />
-                    <span className="font-medium">{item.label}</span>
+                    <Icon size={22} strokeWidth={isActive ? 2.5 : 2} />
+                    <span className="text-base">{item.label}</span>
                   </button>
                 );
               })}
             </nav>
           </div>
 
-          {/* Main Content */}
-          <div className="flex-1 bg-white rounded-lg shadow-sm p-8">
+          {}
+          <div className="flex-1 min-h-[500px]">
             {renderContent()}
           </div>
         </div>

@@ -39,7 +39,7 @@ export function NavUser() {
     logout()
   }
 
-  // Use authenticated user data or fallback
+  
   const userData = user || { name: "User", email: "user@example.com" }
 
   return (

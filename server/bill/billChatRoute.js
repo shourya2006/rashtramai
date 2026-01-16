@@ -4,7 +4,7 @@ const fetchuser = require('../middleware/fetchuser');
 
 const router = express.Router();
 
-// Get or create a bill chat
+
 router.post('/get-or-create', fetchuser, async (req, res) => {
   try {
     const { billId, title, status, pdfUrl, summary } = req.body;
@@ -35,7 +35,7 @@ router.post('/get-or-create', fetchuser, async (req, res) => {
   }
 });
 
-// Get a specific bill chat
+
 router.get('/:billId', fetchuser, async (req, res) => {
   try {
     const { billId } = req.params;
@@ -63,7 +63,7 @@ router.get('/:billId', fetchuser, async (req, res) => {
   }
 });
 
-// Add a message to a chat
+
 router.post('/:billId/message', fetchuser, async (req, res) => {
   try {
     const { billId } = req.params;
@@ -102,7 +102,7 @@ router.post('/:billId/message', fetchuser, async (req, res) => {
   }
 });
 
-// Update chat summary
+
 router.patch('/:billId/summary', fetchuser, async (req, res) => {
   try {
     const { billId } = req.params;
@@ -135,7 +135,7 @@ router.patch('/:billId/summary', fetchuser, async (req, res) => {
   }
 });
 
-// Get user's recent chats
+
 router.get('/user/recent', fetchuser, async (req, res) => {
   try {
     const userId = req.user.id;
@@ -157,7 +157,7 @@ router.get('/user/recent', fetchuser, async (req, res) => {
   }
 });
 
-// Clear messages in a chat
+
 router.delete('/:billId/messages', fetchuser, async (req, res) => {
   try {
     const { billId } = req.params;
@@ -184,7 +184,7 @@ router.delete('/:billId/messages', fetchuser, async (req, res) => {
   }
 });
 
-// Delete a chat (soft delete)
+
 router.delete('/:billId', fetchuser, async (req, res) => {
   try {
     const { billId } = req.params;

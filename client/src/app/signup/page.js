@@ -55,7 +55,7 @@ const Signup = () => {
   return (
     <PublicRoute>
       <div className="flex min-h-screen">
-      {/* Left side - Signup form */}
+      {}
       <div className="w-full md:w-1/2 flex flex-col justify-center items-center p-8 bg-background">
         <div className="w-full max-w-md space-y-8">
           <div className="flex flex-col items-center">
@@ -166,15 +166,15 @@ const Signup = () => {
         </div>
       </div>
       
-      {/* Right side - Gradient background with typewriter effect */}
+      {}
       <div className="hidden md:flex md:w-1/2 justify-center items-center p-12 relative overflow-hidden">
-        {/* Gradient image background */}
+        {}
         <div className="absolute inset-0">
           <img src="/Gradiant.png" alt="Gradient Background" className="w-full h-full object-cover" />
         </div>
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(255,255,255,0.3)_0%,transparent_70%)] mix-blend-overlay"></div>
         
-        {/* Animated background elements */}
+        {}
         <div className="absolute top-0 left-0 w-full h-full">
           <div className="absolute top-1/4 left-1/4 w-48 h-48 rounded-full bg-white/50 blur-xl animate-pulse"></div>
           <div className="absolute bottom-1/3 right-1/3 w-56 h-56 rounded-full bg-pink-300/40 blur-xl animate-pulse animation-delay-1000"></div>

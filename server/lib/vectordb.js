@@ -9,7 +9,7 @@ const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
 
-const EMBEDDING_DIMENSION = 768; // OpenAI text-embedding-3-small dimension (truncated)
+const EMBEDDING_DIMENSION = 768; 
 
 
 export const getIndex = () => {
@@ -26,7 +26,7 @@ export const checkBillExists = async (billId) => {
     console.log(`Checking if bill ${billId} already exists in Pinecone...`);
     const index = getIndex();
     
-    // Single query with topK: 1 to check existence
+    
     const queryResults = await index.query({
       vector: new Array(EMBEDDING_DIMENSION).fill(0),
       topK: 1,
@@ -41,10 +41,10 @@ export const checkBillExists = async (billId) => {
       const metadata = queryResults.matches[0].metadata;
       return {
         exists: true,
-        summary: metadata.summary || null, // Include summary
+        summary: metadata.summary || null, 
         billTitle: metadata.billTitle || metadata.title,
         lastProcessed: metadata.timestamp,
-        // Don't query for chunk count - it's expensive and not critical
+        
         chunksCount: metadata.totalChunks || 'unknown'
       };
     }
@@ -61,7 +61,7 @@ export const checkActExists = async (actId) => {
     console.log(`Checking if act ${actId} already exists in Pinecone...`);
     const index = getActIndex();
     
-    // Single query with topK: 1 to check existence
+    
     const queryResults = await index.query({
       vector: new Array(EMBEDDING_DIMENSION).fill(0),
       topK: 1,
@@ -76,10 +76,10 @@ export const checkActExists = async (actId) => {
       const metadata = queryResults.matches[0].metadata;
       return {
         exists: true,
-        summary: metadata.summary || null, // Include summary
+        summary: metadata.summary || null, 
         actTitle: metadata.actTitle || metadata.title,
         lastProcessed: metadata.timestamp,
-        // Don't query for chunk count - it's expensive and not critical
+        
         chunksCount: metadata.totalChunks || 'unknown'
       };
     }
@@ -249,8 +249,8 @@ export const searchSimilarContentForAct = async (query, actId, topK = 5) => {
 
 export const storeBillContentInChunks = async (chunks) => {
   const MAX_RETRIES = 3;
-  const RETRY_DELAY = 2000; // 2 seconds
-  const BATCH_SIZE = 50; // Process in smaller batches to avoid timeouts
+  const RETRY_DELAY = 2000; 
+  const BATCH_SIZE = 50; 
   
   const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
   
@@ -265,7 +265,7 @@ export const storeBillContentInChunks = async (chunks) => {
         error.message?.includes('fetch failed')
       )) {
         console.log(`⚠️ Connection error, retrying in ${RETRY_DELAY}ms... (attempt ${retryCount + 1}/${MAX_RETRIES})`);
-        await sleep(RETRY_DELAY * (retryCount + 1)); // Exponential backoff
+        await sleep(RETRY_DELAY * (retryCount + 1)); 
         return upsertWithRetry(index, vectors, retryCount + 1);
       }
       throw error;
@@ -277,7 +277,7 @@ export const storeBillContentInChunks = async (chunks) => {
     
     const index = getIndex();
     
-    // Process chunks in batches
+    
     let totalStored = 0;
     for (let batchStart = 0; batchStart < chunks.length; batchStart += BATCH_SIZE) {
       const batchEnd = Math.min(batchStart + BATCH_SIZE, chunks.length);
@@ -312,7 +312,7 @@ export const storeBillContentInChunks = async (chunks) => {
       
       console.log(`✅ Successfully stored batch (${totalStored}/${chunks.length} total)`);
       
-      // Small delay between batches to avoid overwhelming the API
+      
       if (batchEnd < chunks.length) {
         await sleep(500);
       }
@@ -329,8 +329,8 @@ export const storeBillContentInChunks = async (chunks) => {
 
 export const storeActContentInChunks = async (chunks) => {
   const MAX_RETRIES = 3;
-  const RETRY_DELAY = 2000; // 2 seconds
-  const BATCH_SIZE = 50; // Process in smaller batches to avoid timeouts
+  const RETRY_DELAY = 2000; 
+  const BATCH_SIZE = 50; 
   
   const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
   
@@ -345,7 +345,7 @@ export const storeActContentInChunks = async (chunks) => {
         error.message?.includes('fetch failed')
       )) {
         console.log(`⚠️ Connection error, retrying in ${RETRY_DELAY}ms... (attempt ${retryCount + 1}/${MAX_RETRIES})`);
-        await sleep(RETRY_DELAY * (retryCount + 1)); // Exponential backoff
+        await sleep(RETRY_DELAY * (retryCount + 1)); 
         return upsertWithRetry(index, vectors, retryCount + 1);
       }
       throw error;
@@ -357,7 +357,7 @@ export const storeActContentInChunks = async (chunks) => {
     
     const index = getActIndex();
     
-    // Process chunks in batches
+    
     let totalStored = 0;
     for (let batchStart = 0; batchStart < chunks.length; batchStart += BATCH_SIZE) {
       const batchEnd = Math.min(batchStart + BATCH_SIZE, chunks.length);
@@ -375,7 +375,7 @@ export const storeActContentInChunks = async (chunks) => {
           id: chunk.id,
           values: embedding,
           metadata: {
-            actId: chunk.billId.toString(), // Using billId field from processPDFAndCreateChunks
+            actId: chunk.billId.toString(), 
             actTitle: chunk.title,
             content: chunk.content,
             chunkIndex: chunk.chunkIndex,
@@ -392,7 +392,7 @@ export const storeActContentInChunks = async (chunks) => {
       
       console.log(`✅ Successfully stored batch (${totalStored}/${chunks.length} total)`);
       
-      // Small delay between batches to avoid overwhelming the API
+      
       if (batchEnd < chunks.length) {
         await sleep(500);
       }
@@ -457,39 +457,33 @@ const splitIntoChunks = (text, chunkSize = 1000) => {
   return chunks;
 };
 
-/**
- * Find similar bills using vector similarity (cosine similarity)
- * @param {string} billId - The bill ID to find similar bills for
- * @param {string} billTitle - The title of the bill
- * @param {number} topK - Number of similar bills to return (default: 5)
- * @returns {Promise<Array>} Array of similar bills with similarity scores
- */
+
 export const findSimilarBills = async (billId, billTitle, topK = 5) => {
   try {
     console.log(`🔍 Finding similar bills for: ${billTitle}`);
     
     const index = getIndex();
     
-    // Generate embedding for the bill title
+    
     const titleEmbedding = await generateEmbedding(billTitle);
     
-    // Query Pinecone for similar bills
-    // We get topK + 10 to account for chunks from the same bill
+    
+    
     const queryResults = await index.query({
       vector: titleEmbedding,
-      topK: (topK + 1) * 10, // Get more results to filter out same bill
+      topK: (topK + 1) * 10, 
       includeMetadata: true,
     });
     
     console.log(`Found ${queryResults.matches.length} potential matches`);
     
-    // Group by billId and calculate average similarity score
+    
     const billScores = new Map();
     
     for (const match of queryResults.matches) {
       const matchBillId = match.metadata.billId;
       
-      // Skip the current bill
+      
       if (matchBillId === billId.toString()) {
         continue;
       }
@@ -506,7 +500,7 @@ export const findSimilarBills = async (billId, billTitle, topK = 5) => {
       billScores.get(matchBillId).scores.push(match.score);
     }
     
-    // Calculate average scores and sort
+    
     const similarBills = Array.from(billScores.values())
       .map(bill => ({
         billId: bill.billId,

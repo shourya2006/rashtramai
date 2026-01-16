@@ -25,13 +25,13 @@ router.post('/', async (req, res) => {
       return res.status(400).json({ error: 'Bill ID and PDF URL are required' });
     }
 
-    // 1️⃣ Check if bill already exists
+    
     const existenceCheck = await checkBillExists(billId);
 
     if (existenceCheck.exists) {
       console.log(`⚠️ Bill ${billId} already exists with ${existenceCheck.chunksCount} chunks`);
 
-      // Check if summary already exists in the existence check result
+      
       if (existenceCheck.summary) {
         console.log('✅ Using existing summary from database (fast path)');
         return res.json({
@@ -47,7 +47,7 @@ router.post('/', async (req, res) => {
         });
       }
 
-      // Only if summary doesn't exist, query for content
+      
       try {
         const index = getIndex();
         const contentQuery = await index.query({
@@ -58,7 +58,7 @@ router.post('/', async (req, res) => {
         });
 
         if (contentQuery.matches && contentQuery.matches.length > 0) {
-          // Check if summary exists in any of the chunks
+          
           const existingSummary = contentQuery.matches[0].metadata.summary;
           
           if (existingSummary) {
@@ -76,7 +76,7 @@ router.post('/', async (req, res) => {
             });
           }
           
-          // Generate summary if it doesn't exist
+          
           const contextText = contentQuery.matches
             .map(match => match.metadata.content || match.metadata.text || '')
             .filter(Boolean)
@@ -89,7 +89,7 @@ router.post('/', async (req, res) => {
               title || existenceCheck.billTitle
             );
 
-            // Update all chunks with the new summary using update API
+            
             try {
               const index = getIndex();
               const allChunks = await index.query({
@@ -100,7 +100,7 @@ router.post('/', async (req, res) => {
               });
 
               if (allChunks.matches && allChunks.matches.length > 0) {
-                // Update each vector's metadata individually
+                
                 for (const match of allChunks.matches) {
                   await index.update({
                     id: match.id,
@@ -114,7 +114,7 @@ router.post('/', async (req, res) => {
               }
             } catch (updateError) {
               console.error('⚠️ Failed to update chunks with summary:', updateError.message);
-              // Non-critical error, continue anyway
+              
             }
 
             return res.json({
@@ -134,7 +134,7 @@ router.post('/', async (req, res) => {
         console.error('⚠️ Error generating summary from existing content:', summaryError);
       }
 
-      // fallback if summary not generated
+      
       return res.json({
         success: true,
         message: `Bill ${billId} already exists in database`,
@@ -148,7 +148,7 @@ router.post('/', async (req, res) => {
       });
     }
 
-    // 2️⃣ Process new bill PDF
+    
     console.log('🔧 Processing PDF content with chunking...');
     const processedData = await pdfProcessor.processPDFAndCreateChunks(pdfUrl, billId, title);
     console.log(`✅ Processed ${processedData.totalChunks} chunks`);
@@ -160,12 +160,12 @@ router.post('/', async (req, res) => {
       .join('\n\n');
     const aiSummary = await generateBillSummary(contextText, title);
 
-    // Add summary to all chunks before storing
+    
     const chunksWithSummary = processedData.chunks.map(chunk => ({
       ...chunk,
       metadata: {
         ...chunk.metadata,
-        summary: aiSummary, // Store summary in metadata
+        summary: aiSummary, 
       }
     }));
 

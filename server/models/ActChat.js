@@ -63,16 +63,16 @@ const ActChatSchema = new mongoose.Schema({
   },
 });
 
-// Compound index for userId + actId
+
 ActChatSchema.index({ userId: 1, actId: 1, isActive: 1 });
 
-// Update the updatedAt timestamp before saving
+
 ActChatSchema.pre('save', function(next) {
   this.updatedAt = Date.now();
   next();
 });
 
-// Static method to find or create a chat
+
 ActChatSchema.statics.findOrCreate = async function(userId, actData) {
   const { actId, title, status, pdfUrl, summary } = actData;
 
@@ -89,7 +89,7 @@ ActChatSchema.statics.findOrCreate = async function(userId, actData) {
       messages: [],
     });
   } else {
-    // Update act info if provided
+    
     if (title) chat.actTitle = title;
     if (status) chat.actStatus = status;
     if (pdfUrl) chat.pdfUrl = pdfUrl;
@@ -100,12 +100,12 @@ ActChatSchema.statics.findOrCreate = async function(userId, actData) {
   return chat;
 };
 
-// Static method to get chat by act
+
 ActChatSchema.statics.getChatByAct = async function(userId, actId) {
   return this.findOne({ userId, actId, isActive: true });
 };
 
-// Static method to get user's recent chats
+
 ActChatSchema.statics.getUserRecentChats = async function(userId, limit = 10) {
   return this.find({ userId, isActive: true })
     .sort({ updatedAt: -1 })
@@ -113,28 +113,28 @@ ActChatSchema.statics.getUserRecentChats = async function(userId, limit = 10) {
     .select('-messages');
 };
 
-// Instance method to add a message
+
 ActChatSchema.methods.addMessage = async function(messageData) {
   this.messages.push(messageData);
   await this.save();
   return this;
 };
 
-// Instance method to update summary
+
 ActChatSchema.methods.updateSummary = async function(summary) {
   this.summary = summary;
   await this.save();
   return this;
 };
 
-// Instance method to clear messages
+
 ActChatSchema.methods.clearChat = async function() {
   this.messages = [];
   await this.save();
   return this;
 };
 
-// Instance method to deactivate chat (soft delete)
+
 ActChatSchema.methods.deactivate = async function() {
   this.isActive = false;
   await this.save();

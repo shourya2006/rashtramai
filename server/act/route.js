@@ -24,12 +24,12 @@ router.post('/', async (req, res) => {
       content: match.metadata.content.substring(0, 200) + '...',
     }));
 
-    // Set headers for SSE
+    
     res.setHeader('Content-Type', 'text/event-stream');
     res.setHeader('Cache-Control', 'no-cache');
     res.setHeader('Connection', 'keep-alive');
 
-    // Send initial data (sources and actId)
+    
     res.write(`data: ${JSON.stringify({ type: 'meta', sources, actId })}\n\n`);
 
     console.log('Generating response...');
@@ -46,13 +46,13 @@ router.post('/', async (req, res) => {
     res.end();
   } catch (error) {
     console.error('Error in chat:', error);
-    // If headers haven't been sent yet, send JSON error
+    
     if (!res.headersSent) {
       res.status(500).json({
         error: `Failed to process chat: ${error.message}`,
       });
     } else {
-      // If headers sent, try to send error event
+      
       res.write(`data: ${JSON.stringify({ type: 'error', error: error.message })}\n\n`);
       res.end();
     }

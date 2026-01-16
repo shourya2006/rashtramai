@@ -22,21 +22,21 @@ export const AuthProvider = ({ children }) => {
   const API_BASE_URL = 'http://localhost:5001/api/auth';
 
   useEffect(() => {
-    // Check for token in URL (from Google OAuth redirect)
+    
     const urlParams = new URLSearchParams(window.location.search);
     const tokenFromUrl = urlParams.get('token');
     const errorFromUrl = urlParams.get('error');
     
     if (tokenFromUrl) {
-      // Store token from Google OAuth in both storages
+      
       localStorage.setItem('auth-token', tokenFromUrl);
       sessionStorage.setItem('auth-token', tokenFromUrl);
-      // Clean up URL
+      
       window.history.replaceState({}, document.title, window.location.pathname);
-      // Check auth status with new token
+      
       checkAuthStatus();
     } else if (errorFromUrl) {
-      // Clean up URL and show error
+      
       window.history.replaceState({}, document.title, window.location.pathname);
       console.error('OAuth error:', errorFromUrl);
       checkAuthStatus();
@@ -66,7 +66,7 @@ export const AuthProvider = ({ children }) => {
         setUser(userData);
         setIsAuthenticated(true);
       } else {
-        // Token is invalid, remove it from both storages
+        
         localStorage.removeItem('auth-token');
         sessionStorage.removeItem('auth-token');
         setIsAuthenticated(false);
@@ -95,17 +95,17 @@ export const AuthProvider = ({ children }) => {
       const data = await response.json();
 
       if (response.ok) {
-        // Store token based on rememberMe preference
+        
         if (rememberMe) {
           localStorage.setItem('auth-token', data.authToken);
         } else {
           sessionStorage.setItem('auth-token', data.authToken);
         }
         
-        // Get user data
+        
         await checkAuthStatus();
         
-        // Redirect to chat page
+        
         router.push('/app');
         return { success: true };
       } else {
@@ -139,13 +139,13 @@ export const AuthProvider = ({ children }) => {
       const data = await response.json();
 
       if (response.ok) {
-        // Store token in localStorage
+        
         localStorage.setItem('auth-token', data.authToken);
         
-        // Get user data
+        
         await checkAuthStatus();
         
-        // Redirect to chat page
+        
         router.push('/app');
         return { success: true };
       } else {
@@ -166,7 +166,7 @@ export const AuthProvider = ({ children }) => {
   };
 
   const googleLogin = () => {
-    // Direct redirect to Google OAuth endpoint
+    
     window.location.href = `${API_BASE_URL}/google`;
   };
 

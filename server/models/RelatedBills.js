@@ -27,7 +27,7 @@ const RelatedBillsSchema = new mongoose.Schema({
   timestamps: true,
 });
 
-// Index for efficient queries
+
 RelatedBillsSchema.index({ billId: 1 });
 RelatedBillsSchema.index({ lastUpdated: -1 });
 

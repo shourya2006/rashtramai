@@ -1,18 +1,14 @@
-// API utility functions for making authenticated requests
+
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001/api';
 
-/**
- * Get the auth token from storage
- */
+
 const getAuthToken = () => {
   if (typeof window === 'undefined') return null;
   return localStorage.getItem('auth-token') || sessionStorage.getItem('auth-token');
 };
 
-/**
- * Make an authenticated API request
- */
+
 export const apiRequest = async (endpoint, options = {}) => {
   const token = getAuthToken();
   
@@ -33,7 +29,7 @@ export const apiRequest = async (endpoint, options = {}) => {
   
   if (!response.ok) {
     if (response.status === 401) {
-      // Token expired or invalid
+      
       localStorage.removeItem('auth-token');
       sessionStorage.removeItem('auth-token');
       throw new Error('Session expired. Please login again.');
@@ -45,9 +41,7 @@ export const apiRequest = async (endpoint, options = {}) => {
   return response.json();
 };
 
-/**
- * Fetch bills from the API
- */
+
 export const fetchBills = async (page = 1, limit = 10, search = '', status = '') => {
   try {
     let url = `/bills?page=${page}&limit=${limit}`;
@@ -65,9 +59,7 @@ export const fetchBills = async (page = 1, limit = 10, search = '', status = '')
   }
 };
 
-/**
- * Fetch all bill statuses
- */
+
 export const fetchBillStatuses = async () => {
   try {
     const data = await apiRequest('/bills/status');
@@ -78,9 +70,7 @@ export const fetchBillStatuses = async () => {
   }
 };
 
-/**
- * Fetch related bills for a given bill ID
- */
+
 export const fetchRelatedBills = async (billId) => {
   try {
     const data = await apiRequest(`/bills/relatedBills?billId=${billId}`);
@@ -91,9 +81,7 @@ export const fetchRelatedBills = async (billId) => {
   }
 };
 
-/**
- * Fetch bill summary
- */
+
 export const fetchBillSummary = async (billUrl) => {
   try {
     const data = await apiRequest('/bill-summary', {
@@ -107,9 +95,7 @@ export const fetchBillSummary = async (billUrl) => {
   }
 };
 
-/**
- * Process a bill PDF
- */
+
 export const processBill = async (billId, pdfUrl, title) => {
   try {
     const data = await apiRequest('/process-bill', {
@@ -123,9 +109,7 @@ export const processBill = async (billId, pdfUrl, title) => {
   }
 };
 
-/**
- * Get bill summary
- */
+
 export const getBillSummary = async (billId) => {
   try {
     const data = await apiRequest(`/bill-summary?billId=${billId}`);
@@ -136,9 +120,7 @@ export const getBillSummary = async (billId) => {
   }
 };
 
-/**
- * Send chat message with streaming support
- */
+
 export const sendChatMessageStream = async (message, billId, onChunk, onComplete, onError) => {
   const token = getAuthToken();
   if (!token) {
@@ -204,16 +186,12 @@ export const sendChatMessageStream = async (message, billId, onChunk, onComplete
   }
 };
 
-export const sendChatMessage = sendChatMessageStream; // Backward compatibility if needed, but better to use stream explicitly
+export const sendChatMessage = sendChatMessageStream; 
 
 
-/**
- * Bill Chat API - MongoDB persistence
- */
 
-/**
- * Get or create a bill chat
- */
+
+
 export const getOrCreateBillChat = async (billId, title, status, pdfUrl, summary) => {
   try {
     const data = await apiRequest('/bill-chats/get-or-create', {
@@ -227,9 +205,7 @@ export const getOrCreateBillChat = async (billId, title, status, pdfUrl, summary
   }
 };
 
-/**
- * Get a specific bill chat by billId
- */
+
 export const getBillChat = async (billId) => {
   try {
     const data = await apiRequest(`/bill-chats/${billId}`);
@@ -240,9 +216,7 @@ export const getBillChat = async (billId) => {
   }
 };
 
-/**
- * Add a message to a bill chat
- */
+
 export const addMessageToBillChat = async (billId, messageData) => {
   try {
     const data = await apiRequest(`/bill-chats/${billId}/message`, {
@@ -256,9 +230,7 @@ export const addMessageToBillChat = async (billId, messageData) => {
   }
 };
 
-/**
- * Update bill chat summary
- */
+
 export const updateBillChatSummary = async (billId, summary) => {
   try {
     const data = await apiRequest(`/bill-chats/${billId}/summary`, {
@@ -272,9 +244,7 @@ export const updateBillChatSummary = async (billId, summary) => {
   }
 };
 
-/**
- * Get user's recent bill chats
- */
+
 export const getUserRecentChats = async (limit = 10) => {
   try {
     const data = await apiRequest(`/bill-chats/user/recent?limit=${limit}`);
@@ -285,9 +255,7 @@ export const getUserRecentChats = async (limit = 10) => {
   }
 };
 
-/**
- * Clear messages in a bill chat
- */
+
 export const clearBillChatMessages = async (billId) => {
   try {
     const data = await apiRequest(`/bill-chats/${billId}/messages`, {
@@ -300,9 +268,7 @@ export const clearBillChatMessages = async (billId) => {
   }
 };
 
-/**
- * Delete a bill chat
- */
+
 export const deleteBillChat = async (billId) => {
   try {
     const data = await apiRequest(`/bill-chats/${billId}`, {
@@ -315,13 +281,9 @@ export const deleteBillChat = async (billId) => {
   }
 };
 
-/**
- * Acts API Functions
- */
 
-/**
- * Fetch acts from the API
- */
+
+
 export const fetchActs = async (page = 1, limit = 10, search = '', year = '') => {
   try {
     let url = `/acts?page=${page}&limit=${limit}`;
@@ -339,9 +301,7 @@ export const fetchActs = async (page = 1, limit = 10, search = '', year = '') =>
   }
 };
 
-/**
- * Fetch available years for acts
- */
+
 export const fetchActYears = async () => {
   try {
     const data = await apiRequest('/acts/years');
@@ -352,9 +312,7 @@ export const fetchActYears = async () => {
   }
 };
 
-/**
- * Process an act PDF
- */
+
 export const processAct = async (actId, pdfUrl, title) => {
   try {
     const data = await apiRequest('/process-act', {
@@ -368,9 +326,7 @@ export const processAct = async (actId, pdfUrl, title) => {
   }
 };
 
-/**
- * Get act summary
- */
+
 export const getActSummary = async (actId) => {
   try {
     const data = await apiRequest(`/act-summary?actId=${actId}`);
@@ -381,9 +337,7 @@ export const getActSummary = async (actId) => {
   }
 };
 
-/**
- * Send act chat message with streaming support
- */
+
 export const sendActChatMessageStream = async (message, actId, onChunk, onComplete, onError) => {
   const token = getAuthToken();
   if (!token) {
@@ -452,13 +406,9 @@ export const sendActChatMessageStream = async (message, actId, onChunk, onComple
 export const sendActChatMessage = sendActChatMessageStream;
 
 
-/**
- * Act Chat API - MongoDB persistence
- */
 
-/**
- * Get or create an act chat
- */
+
+
 export const getOrCreateActChat = async (actId, title, status, pdfUrl, summary) => {
   try {
     const data = await apiRequest('/act-chats/get-or-create', {
@@ -472,9 +422,7 @@ export const getOrCreateActChat = async (actId, title, status, pdfUrl, summary) 
   }
 };
 
-/**
- * Get a specific act chat by actId
- */
+
 export const getActChat = async (actId) => {
   try {
     const data = await apiRequest(`/act-chats/${actId}`);
@@ -485,9 +433,7 @@ export const getActChat = async (actId) => {
   }
 };
 
-/**
- * Add a message to an act chat
- */
+
 export const addMessageToActChat = async (actId, messageData) => {
   try {
     const data = await apiRequest(`/act-chats/${actId}/message`, {
@@ -501,9 +447,7 @@ export const addMessageToActChat = async (actId, messageData) => {
   }
 };
 
-/**
- * Update act chat summary
- */
+
 export const updateActChatSummary = async (actId, summary) => {
   try {
     const data = await apiRequest(`/act-chats/${actId}/summary`, {
@@ -517,9 +461,7 @@ export const updateActChatSummary = async (actId, summary) => {
   }
 };
 
-/**
- * Get user's recent act chats
- */
+
 export const getUserRecentActChats = async (limit = 10) => {
   try {
     const data = await apiRequest(`/act-chats/user/recent?limit=${limit}`);
@@ -530,9 +472,7 @@ export const getUserRecentActChats = async (limit = 10) => {
   }
 };
 
-/**
- * Clear messages in an act chat
- */
+
 export const clearActChatMessages = async (actId) => {
   try {
     const data = await apiRequest(`/act-chats/${actId}/messages`, {
@@ -545,9 +485,7 @@ export const clearActChatMessages = async (actId) => {
   }
 };
 
-/**
- * Delete an act chat
- */
+
 export const deleteActChat = async (actId) => {
   try {
     const data = await apiRequest(`/act-chats/${actId}`, {
@@ -559,3 +497,27 @@ export const deleteActChat = async (actId) => {
     throw error;
   }
 };
+
+
+export const getDashboardData = async () => {
+  try {
+    const data = await apiRequest('/dashboard');
+    return data;
+  } catch (error) {
+    throw error;
+  }
+};
+
+
+export const getUser = async () => {
+  try {
+    const data = await apiRequest('/auth/getuser', {
+      method: 'POST',
+    });
+    return data;
+  } catch (error) {
+    console.error('Error fetching user details:', error);
+    throw error;
+  }
+};
+

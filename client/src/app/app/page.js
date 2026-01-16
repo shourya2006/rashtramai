@@ -1,13 +1,13 @@
 "use client";
 
 import React, { useState } from "react";
-import { Sidebar, SidebarBody, SidebarLink } from "@/components/ui/sidebar";
 import { 
   LayoutDashboard, 
   Settings, 
   LogOut, 
   FileText, 
-  Brain
+  Brain,
+  Menu
 } from "lucide-react";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
@@ -19,9 +19,10 @@ import ActsUI from '@/components/Acts';
 import SettingsPage from "@/components/Settings";
 import Dashboard from "@/components/Dashboard";
 
-function SidebarDemo() {
+function AppLayout() {
   const [activeView, setActiveView] = useState("Dashboard");
   const { logout, user } = useAuth();
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   
   const getUserInitials = (name) => {
     if (!name) return "U";
@@ -38,171 +39,128 @@ function SidebarDemo() {
   const links = [
     {
       label: "Dashboard",
-      href: "#",
-      icon: (
-        <LayoutDashboard className="text-neutral-700 dark:text-neutral-200 h-5 w-5 flex-shrink-0" />
-      ),
+      icon: LayoutDashboard,
       onClick: () => setActiveView("Dashboard")
     },
     {
       label: "Parliament Bills",
-      href: "#",
-      icon: (
-        <Brain className="text-neutral-700 dark:text-neutral-200 h-5 w-5 flex-shrink-0" />
-      ),
+      icon: Brain,
       onClick: () => setActiveView("Parliament Bills")
     },
     {
       label: "Parliament Acts",
-      href: "#",
-      icon: (
-        <FileText className="text-neutral-700 dark:text-neutral-200 h-5 w-5 flex-shrink-0" />
-      ),
+      icon: FileText,
       onClick: () => setActiveView("Parliament Acts")
     },
     {
       label: "Settings",
-      href: "#",
-      icon: (
-        <Settings className="text-neutral-700 dark:text-neutral-200 h-5 w-5 flex-shrink-0" />
-      ),
+      icon: Settings,
       onClick: () => setActiveView("Settings")
     },
-    {
-      label: "Logout",
-      href: "#",
-      icon: (
-        <LogOut className="text-neutral-700 dark:text-neutral-200 h-5 w-5 flex-shrink-0" />
-      ),
-      onClick: () => {
-        logout();
-      }
-    },
   ];
-  const [open, setOpen] = useState(false);
+
   return (
-    <div className="flex h-screen overflow-hidden bg-background">
-      {/* Fixed Desktop Sidebar */}
-      <div className="fixed left-0 top-0 z-10 h-screen hidden md:block">
-        <Sidebar open={open} setOpen={setOpen}>
-          <SidebarBody className="justify-between gap-10 h-full">
-            <div className="flex flex-col flex-1 overflow-y-auto overflow-x-hidden">
-              {open ? <Logo /> : <LogoIcon />}
-              <div className="mt-8 flex flex-col gap-2">
-                {links.map((link, idx) => (
-                  <div
-                    key={idx}
-                    onClick={link.onClick}
-                    className={cn(
-                      "cursor-pointer transition-colors duration-200",
-                      activeView === link.label && "bg-primary/10 rounded-lg"
-                    )}
-                  >
-                    <SidebarLink
-                      link={{
-                        ...link,
-                        icon: React.cloneElement(link.icon, {
-                          className: cn(
-                            "h-5 w-5 flex-shrink-0",
-                            activeView === link.label
-                              ? "text-primary"
-                              : "text-neutral-700 dark:text-neutral-200"
-                          ),
-                        }),
-                      }}
-                    />
-                  </div>
-                ))}
+    <div className="flex h-screen bg-gray-50 dark:bg-neutral-900 font-sans">
+      {}
+      {isMobileMenuOpen && (
+        <div 
+          className="fixed inset-0 bg-black/50 z-40 md:hidden"
+          onClick={() => setIsMobileMenuOpen(false)}
+        />
+      )}
+
+      {}
+      <aside className={cn(
+        "fixed md:static inset-y-0 left-0 z-50 w-64 bg-white dark:bg-neutral-900 border-r border-gray-200 dark:border-neutral-800 transition-transform duration-200 ease-in-out",
+        "md:translate-x-0", 
+        isMobileMenuOpen ? "translate-x-0" : "-translate-x-full"
+      )}>
+        <div className="flex flex-col h-full">
+          {}
+          <div className="h-16 flex items-center px-6 border-b border-gray-100 dark:border-neutral-800">
+            <Logo />
+          </div>
+
+          {}
+          <div className="flex-1 overflow-y-auto py-6 px-3 space-y-1">
+            {links.map((link) => {
+              const isActive = activeView === link.label;
+              return (
+                <button
+                  key={link.label}
+                  onClick={() => {
+                    link.onClick();
+                    setIsMobileMenuOpen(false);
+                  }}
+                  className={cn(
+                    "w-full flex items-center gap-3 px-3 py-2.5 text-sm font-medium rounded-lg transition-all duration-200",
+                    isActive 
+                      ? "bg-red-50 text-[#B20F38] dark:bg-red-900/20 dark:text-red-400" 
+                      : "text-gray-600 hover:bg-gray-50 hover:text-gray-900 dark:text-neutral-400 dark:hover:bg-neutral-800 dark:hover:text-white"
+                  )}
+                >
+                  <link.icon className={cn("h-5 w-5", isActive ? "text-[#B20F38] dark:text-red-400" : "text-gray-400 group-hover:text-gray-500")} />
+                  {link.label}
+                </button>
+              );
+            })}
+          </div>
+
+          {}
+          <div className="p-4 border-t border-gray-200 dark:border-neutral-800 space-y-2">
+            <div className="flex items-center gap-3 px-3 py-2 rounded-lg bg-gray-50 dark:bg-neutral-800/50">
+              <div className="h-8 w-8 rounded-full bg-[#B20F38] flex items-center justify-center text-white text-xs font-bold">
+                {userInitials}
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium text-gray-900 dark:text-white truncate">
+                  {userName}
+                </p>
+                <p className="text-xs text-gray-500 dark:text-neutral-400 truncate">
+                  View Profile
+                </p>
               </div>
             </div>
-            <div>
-              <SidebarLink
-                link={{
-                  label: userName,
-                  href: "#",
-                  icon: (
-                    <div className="h-7 w-7 flex-shrink-0 rounded-full bg-gradient-to-br from-yellow-400 to-yellow-600 flex items-center justify-center text-white font-semibold text-sm">
-                      {userInitials}
-                    </div>
-                  ),
-                }}
-              />
-            </div>
-          </SidebarBody>
-        </Sidebar>
-      </div>
+            <button
+              onClick={logout}
+              className="w-full flex items-center gap-3 px-3 py-2 text-sm font-medium text-gray-600 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors dark:text-neutral-400 dark:hover:text-red-400 dark:hover:bg-red-900/20"
+            >
+              <LogOut className="h-5 w-5" />
+              Logout
+            </button>
+          </div>
+        </div>
+      </aside>
 
-      {/* Mobile Sidebar */}
-      <div className="md:hidden w-full">
-        <Sidebar open={open} setOpen={setOpen}>
-          <SidebarBody className="justify-between gap-10">
-            <div className="flex flex-col flex-1 overflow-y-auto overflow-x-hidden">
-              {open ? <Logo /> : <LogoIcon />}
-              <div className="mt-8 flex flex-col gap-2">
-                {links.map((link, idx) => (
-                  <div
-                    key={idx}
-                    onClick={link.onClick}
-                    className={cn(
-                      "cursor-pointer transition-colors duration-200",
-                      activeView === link.label && "bg-primary/10 rounded-lg"
-                    )}
-                  >
-                    <SidebarLink
-                      link={{
-                        ...link,
-                        icon: React.cloneElement(link.icon, {
-                          className: cn(
-                            "h-5 w-5 flex-shrink-0",
-                            activeView === link.label
-                              ? "text-primary"
-                              : "text-neutral-700 dark:text-neutral-200"
-                          ),
-                        }),
-                      }}
-                    />
-                  </div>
-                ))}
-              </div>
-            </div>
-            <div>
-              <SidebarLink
-                link={{
-                  label: userName,
-                  href: "#",
-                  icon: (
-                    <div className="h-7 w-7 flex-shrink-0 rounded-full bg-gradient-to-br from-yellow-400 to-yellow-600 flex items-center justify-center text-white font-semibold text-sm">
-                      {userInitials}
-                    </div>
-                  ),
-                }}
-              />
-            </div>
-          </SidebarBody>
-        </Sidebar>
-      </div>
-
-      {/* Main Content Area */}
-      <div
-        className={cn(
-          "flex-1 h-screen overflow-auto transition-all duration-300 ease-in-out",
-          "pt-14 md:pt-0",
-          "ml-0 md:ml-[60px]",
-          open && "md:ml-[300px]"
-        )}
-      >
-        <AnimatePresence mode="wait">
-          <motion.div
-            key={activeView}
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -10 }}
-            transition={{ duration: 0.25, ease: "easeInOut" }}
-            className="h-full w-full" // ✅ make sure this exists
+      {}
+      <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
+        {}
+        <div className="md:hidden h-16 bg-white border-b border-gray-200 flex items-center justify-between px-4">
+          <Logo />
+          <button 
+            onClick={() => setIsMobileMenuOpen(true)}
+            className="p-2 text-gray-600 hover:bg-gray-100 rounded-lg"
           >
-            {renderActiveView(activeView)}
-          </motion.div>
-        </AnimatePresence>
+            <Menu className="h-6 w-6" />
+          </button>
+        </div>
+
+        <main className="flex-1 overflow-y-auto p-6 md:p-8 scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-transparent">
+          <div className="max-w-7xl mx-auto h-full">
+            <AnimatePresence mode="wait">
+              <motion.div
+                key={activeView}
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -10 }}
+                transition={{ duration: 0.2 }}
+                className="h-full"
+              >
+                {renderActiveView(activeView)}
+              </motion.div>
+            </AnimatePresence>
+          </div>
+        </main>
       </div>
     </div>
   );
@@ -210,29 +168,13 @@ function SidebarDemo() {
   function renderActiveView(view) {
     switch(view) {
       case "Dashboard":
-        return (
-          <div className="w-[96vw] h-screen overflow-x-hidden">
-            <Dashboard />
-          </div>
-        );
+        return <Dashboard />;
       case "Parliament Bills":
-        return (
-          <div className="w-[96vw] h-screen m-auto">
-            <BillsListUI />
-          </div>
-        );
+        return <BillsListUI />;
       case "Parliament Acts":
-        return (
-          <div className="w-[96vw] h-screen overflow-x-hidden">
-            <ActsUI />
-          </div>
-        );
+        return <ActsUI />;
       case "Settings":
-        return (
-          <div className="w-[96vw] h-screen overflow-x-hidden">
-            <SettingsPage />
-          </div>
-        );
+        return <SettingsPage />;
       default:
         return <Dashboard />;
     }
@@ -243,16 +185,14 @@ export const Logo = () => {
   return (
     <Link
       href="#"
-      className="font-normal flex space-x-2 items-center text-sm text-black py-1 relative z-20"
+      className="font-normal flex space-x-2 items-center text-sm text-black py-1 relative z-20 pl-2"
     >
-      <div className="h-5 w-6 bg-gradient-to-br from-yellow-400 to-yellow-600 rounded-br-lg rounded-tr-sm rounded-tl-lg rounded-bl-sm flex-shrink-0" />
-      <motion.span
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        className="font-medium whitespace-pre bg-gradient-to-r from-yellow-600 to-yellow-700 bg-clip-text text-transparent"
-      >
+      <div className="h-6 w-6 bg-[#B20F38] rounded-md flex items-center justify-center">
+        <span className="text-white font-bold text-xs">R</span>
+      </div>
+      <span className="font-semibold text-lg tracking-tight text-gray-900 dark:text-white">
         Rashtram AI
-      </motion.span>
+      </span>
     </Link>
   );
 };
@@ -261,21 +201,19 @@ export const LogoIcon = () => {
   return (
     <Link
       href="#"
-      className="font-normal flex space-x-2 items-center text-sm text-black py-1 relative z-20"
+      className="font-normal flex space-x-2 items-center text-sm text-black py-1 relative z-20 pl-1"
     >
-      <div className="h-5 w-6 bg-gradient-to-br from-yellow-400 to-yellow-600 rounded-br-lg rounded-tr-sm rounded-tl-lg rounded-bl-sm flex-shrink-0" />
+      <div className="h-6 w-6 bg-[#B20F38] rounded-md flex items-center justify-center">
+        <span className="text-white font-bold text-xs">R</span>
+      </div>
     </Link>
   );
 };
 
-
-
 export default function App() {
   return (
     <ProtectedRoute>
-      <main className="flex min-h-screen">
-        <SidebarDemo />
-      </main>
+      <AppLayout />
     </ProtectedRoute>
   );
 }
