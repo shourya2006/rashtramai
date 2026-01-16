@@ -25,7 +25,7 @@ const googleLoginController = async (req, res) => {
     
     
     
-    res.redirect('http://localhost:3000/app?token='+token);
+    res.redirect(`${process.env.CLIENT_URL}/app?token=`+token);
     }catch(error){
         console.error('Google Login error:', error);
         return res.status(500).json({ error: "Internal server error" });
