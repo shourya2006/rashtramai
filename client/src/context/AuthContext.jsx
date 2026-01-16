@@ -19,7 +19,7 @@ export const AuthProvider = ({ children }) => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const router = useRouter();
 
-  const API_BASE_URL = 'http://localhost:5001/api/auth';
+  const API_BASE_URL = `${process.env.NEXT_PUBLIC_API_URL}/auth`;
 
   useEffect(() => {
     
